@@ -45,11 +45,9 @@ def get_all_graphene_isomers(
             print(f"Error: {folder} does not exist after extracting {tar_path}.", file=sys.stderr)
             sys.exit(1)
 
-
-
     xyz_files = get_all_xyzs(folder)
     graphenes = [GrapheneIsomer(x) for x in xyz_files]
-    graphenes.sort(key=lambda g: g.id)
+    graphenes.sort(key=lambda g: (g.carbons, g.hydrogens, g.id))
     return graphenes
 
 
