@@ -18,6 +18,7 @@ for xyz in common.get_all_graphene_isomers():
                 "basis": "def2-QZVPP",
                 "aux_basis": "def2-QZVPP-RIFIT",
                 "force_cartesian_basis_sets": False,
+                "standard_orientation": "None",
             },
             "system": {
                 "max_gpu_memory_mb": 50000,
@@ -30,7 +31,7 @@ for xyz in common.get_all_graphene_isomers():
                 },
                 "log": {"console": {"level": "Verbose"}},
                 "ks_dft": {
-                    "functional": "revDSD-PBEP86-D4",
+                    "functional": "revDSD-PBEP86-D4(noFC)",
                     "method": "BatchDense",
                     "grid": {
                         "default_grid": "ULTRAFINE",
