@@ -5,7 +5,7 @@ import re
 def get_all_xyzs(folder: Path) -> list[Path]:
     """Get all .xyz files in a folder."""
     assert folder.exists(), f"Folder {folder} does not exist."
-    return list(folder.glob("*.xyz"))
+    return list(sorted(folder.glob("*.xyz")))
 
 
 class GrapheneIsomer:
@@ -48,7 +48,9 @@ def get_all_graphene_isomers(
 
 
     xyz_files = get_all_xyzs(folder)
-    return [GrapheneIsomer(xyz) for xyz in xyz_files]
+    graphenes = [GrapheneIsomer(x) for x in xyz_files]
+    graphenes.sort(key=lambda g: g.id)
+    return graphenes
 
 
 if __name__ == "__main__":
