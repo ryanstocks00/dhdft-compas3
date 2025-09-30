@@ -24,10 +24,6 @@ end
     nprocs 104
 end
 
+*XYZFILE 0 1 {xyz.xyz_path.resolve()}
 """
             )
-            f.write(f"* xyz 0 1\n")
-            with open(xyz.xyz_path, "r") as xyz_file:
-                lines = xyz_file.readlines()[2:]
-                f.writelines(lines)
-            f.write(f"*\n")
