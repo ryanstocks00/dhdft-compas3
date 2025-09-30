@@ -1,0 +1,39 @@
+from pathlib import Path
+import re
+
+
+def get_all_xyzs(folder: Path) -> list[Path]:
+    """Get all .xyz files in a folder."""
+    assert folder.exists(), f"Folder {folder} does not exist."
+    return list(folder.glob("*.xyz"))
+
+
+class GrapheneIsomer:
+    def __init__(self, xyz_path: Path):
+        self.xyz_path = xyz_path
+        self.name = xyz_path.stem
+
+        m = re.match(r"hc_c(\d+)h(\d+)_0pent_(\d+)", self.name)
+        if m:
+            self.carbons = int(m.group(1))
+            self.hydrogens = int(m.group(2))
+            self.id = int(m.group(3))
+        else:
+            raise ValueError(f"Filename {self.name} does not match expected pattern.")
+
+    def __repr__(self):
+        return f"GrapheneIsomer(name={self.name}, carbons={self.carbons}, hydrogens={self.hydrogens}, id={self.id})"
+
+
+def get_all_graphene_isomers(
+    folder: Path = Path(__file__).parent / "compas3x-xyzs",
+) -> list[GrapheneIsomer]:
+    """Get all GrapheneIsomer objects from .xyz files in a folder."""
+    xyz_files = get_all_xyzs(folder)
+    return [GrapheneIsomer(xyz) for xyz in xyz_files]
+
+
+if __name__ == "__main__":
+    xyz_files = get_all_graphene_isomers()
+    for xyz in xyz_files:
+        print(f"Loaded isomer: {xyz}")
