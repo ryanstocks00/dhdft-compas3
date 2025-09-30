@@ -12,17 +12,20 @@ for xyz in common.get_all_graphene_isomers():
         input_path.mkdir(parents=True, exist_ok=True)
         with open(input_path / f"{xyz.name}.inp", "w") as f:
             f.write(
-                f"""
-! RKS revDSD-PBEP86-D4/2021 defgrid3 RIJK RI NOPOP NOMULLIKEN NOLOEWDIN NOMAYER NoFrozencore NoUseSym
+                f"""! RKS revDSD-PBEP86-D4/2021 defgrid3 RIJK RI NOPOP NOMULLIKEN NOLOEWDIN NOMAYER NoFrozencore NoUseSym
 
 %basis
   Basis "def2-QZVPP"
   AuxJK "def2-QZVPP/C"
   AuxC "def2-QZVPP/C"
 end
-                    """
+
+%pal
+    nprocs 104
+end
+
+"""
             )
-            f.write(f"%pal nprocs 104 end\n")
             f.write(f"* xyz 0 1\n")
             with open(xyz.xyz_path, "r") as xyz_file:
                 lines = xyz_file.readlines()[2:]
