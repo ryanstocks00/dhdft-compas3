@@ -20,6 +20,18 @@ for xyz in common.get_all_graphene_isomers():
   AuxC "def2-QZVPP/C"
 end
 
+%method
+  ScalHFX 0.69
+  ScalDFX 0.31
+  ScalDFC 0.4038
+  ScalLDAC 0.4038
+end
+
+%mp2
+  PS 0.5979
+  PT 0.0571
+end
+
 %pal
     nprocs 104
 end
