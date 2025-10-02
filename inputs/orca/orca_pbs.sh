@@ -19,4 +19,4 @@ cp "$INPUT_FOLDER"/"$INPUT_FILE".inp "$INPUT_FILE".inp
 
 $ORCA_PATH/orca "$INPUT_FILE".inp | tee "$OUTPUT_FILE"
 
-rm "$INPUT_FILE.gbw" "$INPUT_FILE.densities" "$INPUT_FILE.bibtex" "$INPUT_FILE.densitiesinfo"
+rm "$INPUT_FILE.gbw" "$INPUT_FILE.densities" "$INPUT_FILE.bibtex" "$INPUT_FILE.densitiesinfo" "$INPUT_FILE".inp

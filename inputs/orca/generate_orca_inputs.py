@@ -25,6 +25,11 @@ end
   ScalDFX 0.31
   ScalDFC 0.4038
   ScalLDAC 0.4038
+
+  D4S6 0.4612
+  D4S8 0.0
+  D4A1 0.44
+  D4A2 3.60
 end
 
 %mp2
