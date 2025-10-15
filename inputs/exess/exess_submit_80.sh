@@ -2,7 +2,7 @@
 #SBATCH -A m4265
 #SBATCH -C gpu&hbm80g
 #SBATCH -q regular
-#SBATCH -t 30:00
+#SBATCH -t 1:00:00
 #SBATCH -N 1
 
 export EXESS_PATH="/global/homes/r/ryans/HERMES"
