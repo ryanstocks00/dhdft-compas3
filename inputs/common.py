@@ -55,3 +55,24 @@ if __name__ == "__main__":
     xyz_files = get_all_graphene_isomers()
     for xyz in xyz_files:
         print(f"Loaded isomer: {xyz}")
+
+basis_combos = {
+        "qz_rijk": ["def2-QZVPP", "def2-QZVPP/JK", "def2-QZVPP/C"],
+        "qz_riri": ["def2-QZVPP", "def2-QZVPP/C", "def2-QZVPP/C"],
+        "qz_jkjk": ["def2-QZVPP", "def2-QZVPP/JK", "def2-QZVPP/JK"],
+        "qz_ri": ["def2-QZVPP", "def2-QZVPP/C"],
+        "qz_nori": ["def2-QZVPP"],
+        "tz_rijk": ["def2-TZVP", "def2/JK", "def2-TZVP/C"],
+        "tz_riri": ["def2-TZVP", "def2-TZVP/C", "def2-TZVP/C"],
+        "tz_jkjk": ["def2-TZVP", "def2/JK", "def2/JK"],
+        "tz_ri": ["def2-TZVP", "def2-TZVP/C"],
+        "tz_nori": ["def2-TZVP"],
+        "dz_rijk": ["def2-SVP", "def2/JK", "def2-SVP/C"],
+        "dz_riri": ["def2-SVP", "def2-SVP/C", "def2-SVP/C"],
+        "dz_jkjk": ["def2-SVP", "def2/JK", "def2/JK"],
+        "dz_ri": ["def2-SVP", "def2-SVP/C"],
+        "dz_nori": ["def2-SVP"],
+        }
+
+
+

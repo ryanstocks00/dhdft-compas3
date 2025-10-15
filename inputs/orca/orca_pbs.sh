@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -P kx58
-#PBS -q expresssr
-#PBS -l walltime=00:30:00
+#PBS -q normalsr
+#PBS -l walltime=00:15:00
 #PBS -l mem=512GB
 #PBS -l jobfs=400GB
 #PBS -l software=orca
@@ -19,4 +19,4 @@ cp "$INPUT_FOLDER"/"$INPUT_FILE".inp "$INPUT_FILE".inp
 
 $ORCA_PATH/orca "$INPUT_FILE".inp | tee "$OUTPUT_FILE"
 
-rm "$INPUT_FILE.gbw" "$INPUT_FILE.densities" "$INPUT_FILE.bibtex" "$INPUT_FILE.densitiesinfo" "$INPUT_FILE".inp
+rm "$INPUT_FILE.gbw" "$INPUT_FILE.densities" "$INPUT_FILE.bibtex" "$INPUT_FILE.densitiesinfo" "$INPUT_FILE".inp "$INPUT_FILE*.tmp*" "$INPUT_FILE".bas*
