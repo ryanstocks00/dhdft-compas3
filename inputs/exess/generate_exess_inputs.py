@@ -6,17 +6,14 @@ inputs_path = Path(__file__).parent.parent
 sys.path.insert(0, str(inputs_path))
 import common
 
-BATCH_SIZE = 20
-
-graphene_isomers = common.get_all_graphene_isomers()
-selected_isomers = list(filter(lambda x: x.carbons <= 32 or x.id < 40, graphene_isomers))
-
 input_path = Path(__file__).parent / "exess_inputs"
 input_path.mkdir(parents=True, exist_ok=True)
 
-for i in range(0, len(selected_isomers), BATCH_SIZE):
-    batch = selected_isomers[i : i + BATCH_SIZE]
-    print(f"Batch {i//BATCH_SIZE + 1}: {len(batch)} isomers")
+for batch in common.exess_batches:
+    print(
+        f"Batch {batch.initial_index}-{batch.final_index}: {len(batch.isomers)} isomers"
+    )
+    isomers = batch.isomers
     json_to_write = {
         "driver": "Energy",
         "model": {
@@ -49,8 +46,8 @@ for i in range(0, len(selected_isomers), BATCH_SIZE):
         },
         "topologies": [],
     }
-    for xyz in batch:
+    for xyz in isomers:
         print(xyz)
         json_to_write["topologies"].append({"xyz": str(xyz.xyz_path.resolve())})
-    with open(input_path / f"isomers_{i}-{i + len(batch) - 1}.json", "w") as f:
+    with open(batch.input_file_path(), "w") as f:
         json.dump(json_to_write, f, indent=4)
