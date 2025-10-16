@@ -35,7 +35,7 @@ def get_all_graphene_isomers(optimizer: str) -> list[GrapheneIsomer]:
         tar_path = folder.parent / "compas-3x.tar.gz"
     elif optimizer == "DFT":
         folder = Path(__file__).parent / "compas3D-xyzs"
-        tar_path = folder.parent / "compas-3d.tar.gz"
+        tar_path = folder.parent / "compas-3D.tar.gz"
     else:
         raise ValueError(f"Optimizer {optimizer} not recognized. Use 'xTB' or 'DFT'.")
 
