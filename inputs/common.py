@@ -152,6 +152,11 @@ class EXESSCalculationBatch:
         input_path.mkdir(parents=True, exist_ok=True)
         return input_path / f"{self.name()}.json"
 
+    def output_file_path(self) -> Path:
+        output_path = Path(__file__).parent.parent / "outputs" / "exess"
+        output_path.mkdir(parents=True, exist_ok=True)
+        return output_path / f"{self.name()}.out"
+
 
 selected_isomers = list(
     filter(lambda x: x.carbons <= 32 or x.id < 40, all_graphene_isomers)
