@@ -157,15 +157,30 @@ def main():
         return
 
     rows: List[Dict[str, float | str]] = []
-    for fp in files:
+
+    for orca_calc in common.orca_calculations:
+        fp = orca_calc.output_filepath().with_suffix(".property.txt")
+        if (not fp.exists() or not fp.is_file()):
+            print(
+                f"Warning: Expected file {fp} for {orca_calc.input_filename} not found."
+            )
+            continue
         sections = parse_property_file(fp)
         record = extract_fields(sections)
         # Add filename (base) for traceability
         record = {"filename": fp.name, **record}
+        record["isomer"] = orca_calc.isomer.name
+        record["primary_basis"] = orca_calc.primary_basis
+        record["scf_aux_basis"] = orca_calc.scf_aux_basis or ""
+        record["ri_aux_basis"] = orca_calc.ri_aux_basis or ""
         rows.append(record)
 
     # Determine CSV field order (stable and readable)
     preferred_order = [
+        "isomer",
+        "primary_basis",
+        "scf_aux_basis",
+        "ri_aux_basis",
         "filename",
         "version",
         "progname",
