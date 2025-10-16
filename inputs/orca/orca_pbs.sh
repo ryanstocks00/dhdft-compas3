@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -P kx58
 #PBS -q normalsr
-#PBS -l walltime=00:15:00
+#PBS -l walltime=0:30:00
 #PBS -l mem=512GB
 #PBS -l jobfs=400GB
 #PBS -l software=orca

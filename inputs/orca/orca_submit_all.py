@@ -1,16 +1,23 @@
-import os
+import subprocess, re, sys
 from pathlib import Path
-import sys
-
 sys.path.append(Path(__file__).parent.parent.as_posix())
 import common
 
-for calc in common.orca_calculations:
-    print("Submitting calculation for", calc)
-    input_file = calc.input_filepath()
-    output_file = calc.output_filepath()
-    input_folder = input_file.parent
-    output_folder = output_file.parent
-    qsub_command = f"""qsub -v OUTPUT_FOLDER={output_folder.resolve()},INPUT_FOLDER={input_folder.resolve()},INPUT_FILE={input_file.stem},OUTPUT_FILE={output_file.name} orca_pbs.sh"""
-    print(qsub_command)
-    os.system(qsub_command)
+MAX_CONCURRENT = 20
+job_ids, jobid_pat = [], re.compile(r"(\d[\w\.\-]*)")
+
+for i, calc in enumerate(common.orca_calculations):
+    inp, out = calc.input_filepath(), calc.output_filepath()
+    dep = f"-W depend=afterany:{job_ids[i - MAX_CONCURRENT]}" if i >= MAX_CONCURRENT else ""
+    cmd = [
+                    "qsub", "-v",
+                            f"OUTPUT_FOLDER={out.parent.resolve()},INPUT_FOLDER={inp.parent.resolve()},"
+                                    f"INPUT_FILE={inp.stem},OUTPUT_FILE={out.name}",
+                                        ]
+    if dep: 
+        cmd += dep.split()
+    cmd.append("orca_pbs.sh")
+    print(" ".join(cmd))
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    m = jobid_pat.search(res.stdout)
+    job_ids.append(m.group(1) if m else "unknown")
