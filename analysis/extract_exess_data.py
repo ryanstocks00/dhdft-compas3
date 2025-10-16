@@ -123,15 +123,28 @@ def main():
 
     for exess_batch in common.exess_batches:
         batch_name = exess_batch.name()
+
+        with open(exess_batch.input_file_path(), "r", encoding="utf-8") as f:
+            input_json = json.load(f)
         for idx in range(len(exess_batch.isomers)):
             json_re = rf".*exess_inputs_{batch_name}_topology_{idx}.json$"
             matched = [p for p in json_files if re.match(json_re, p.name)]
             if len(matched) == 0:
-                print(f"Warning: No JSON file found for {batch_name} topology {idx}")
+                print(
+                    f"Warning: No JSON file found for {batch_name} topology {idx} (isomer {exess_batch.isomers[idx].name})"
+                )
             elif len(matched) > 1:
                 print(
                     f"Warning: Multiple JSON files found for {batch_name} topology {idx}: {matched}"
                 )
+            elif (
+                input_json.get("topologies")[idx]["xyz"]
+                != exess_batch.isomers[idx].xyz_path.as_posix()
+            ):
+                print(
+                    f"Warning: Mismatch in input XYZ for {batch_name} topology {idx}: {input_json.get('topologies')[idx]['xyz']} vs {exess_batch.isomers[idx].xyz_path.as_posix()}"
+                )
+                exit(1)
             else:
                 try:
                     extracted_data = parse_qmmbe_json(matched[0])

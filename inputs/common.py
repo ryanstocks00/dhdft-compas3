@@ -10,11 +10,12 @@ def get_all_xyzs(folder: Path) -> list[Path]:
 
 class GrapheneIsomer:
     def __init__(self, xyz_path: Path, optimizer):
+        prefix = "compas3x_" if optimizer == "xTB" else "compas3D_"
         self.xyz_path = xyz_path
-        self.name = xyz_path.stem
+        self.name = prefix + xyz_path.stem
         self.optimizer = optimizer
 
-        m = re.match(r"hc_c(\d+)h(\d+)_0pent_(\d+)", self.name)
+        m = re.match(r"compas3._hc_c(\d+)h(\d+)_0pent_(\d+)", self.name)
         if m:
             self.carbons = int(m.group(1))
             self.hydrogens = int(m.group(2))
@@ -26,9 +27,7 @@ class GrapheneIsomer:
         return f"GrapheneIsomer(name={self.name}, carbons={self.carbons}, hydrogens={self.hydrogens}, id={self.id}, optimizer={self.optimizer})"
 
 
-def get_all_graphene_isomers(
-    optimizer: str
-) -> list[GrapheneIsomer]:
+def get_all_graphene_isomers(optimizer: str) -> list[GrapheneIsomer]:
     """Get all GrapheneIsomer objects from .xyz files in a folder."""
 
     if optimizer == "xTB":
