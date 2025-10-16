@@ -144,13 +144,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Extract ORCA .property.txt energies to CSV"
     )
-    parser.add_argument("folder", help="Folder containing *.property.txt files")
     parser.add_argument(
-        "-o", "--output", default="energies.csv", help="Output CSV filename"
+        "-o", "--output", default="orca_data.csv", help="Output CSV filename"
     )
     args = parser.parse_args()
 
-    folder = Path(args.folder).expanduser().resolve()
+    folder = Path(__file__).parent.parent / "outputs" / "orca"
     files = sorted(folder.glob("*.property.txt"))
 
     if not files:

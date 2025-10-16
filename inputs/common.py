@@ -68,10 +68,11 @@ def get_all_graphene_isomers(optimizer: str) -> list[GrapheneIsomer]:
     return graphenes
 
 
-if __name__ == "__main__":
-    xyz_files = get_all_graphene_isomers()
-    for xyz in xyz_files:
-        print(f"Loaded isomer: {xyz}")
+xtb_graphene_isomers = get_all_graphene_isomers("xTB")
+dft_graphene_isomers = get_all_graphene_isomers("DFT")
+
+all_graphene_isomers = xtb_graphene_isomers + dft_graphene_isomers
+
 
 basis_combos = {
     "qz_rijk": ["def2-QZVPP", "def2-QZVPP/JK", "def2-QZVPP/C"],
@@ -101,12 +102,36 @@ class ORCACalculationToPerform:
             raise ValueError(f"Basis combo {basis_id} not recognized.")
 
         self.primary_basis = basis_combos[basis_id][0]
+        self.scf_aux_basis = None
+        self.ri_aux_basis = None
+        if len(basis_combos[basis_id]) > 2:
+            self.scf_aux_basis = basis_combos[basis_id][1]
+        if len(basis_combos[basis_id]) > 1:
+            self.ri_aux_basis = basis_combos[basis_id][-1]
 
-        self.input_filename = f"{isomer.name}_{basis_combo}.inp"
-        self.output_filename = f"{isomer.name}_{basis_combo}.out"
+        self.input_filename = f"{isomer.name}_{self.basis_id}.inp"
+        self.output_filename = f"{isomer.name}_{self.basis_id}.out"
+
+    def input_filepath(self) -> Path:
+        input_path = Path(__file__).parent / "orca" / "orca_inputs" / self.basis_id
+        input_path.mkdir(parents=True, exist_ok=True)
+        return input_path / self.input_filename
+
+    def output_filepath(self) -> Path:
+        output_path = Path(__file__).parent.parent / "outputs" / "orca"
+        output_path.mkdir(parents=True, exist_ok=True)
+        return output_path / self.output_filename
 
     def __repr__(self):
         return f"ORCACalculationToPerform(isomer={self.isomer.name}, basis_combo={self.basis_id})"
+
+
+orca_calculations: list[ORCACalculationToPerform] = []
+
+for isomer in all_graphene_isomers:
+    if isomer.carbons == 24 and isomer.hydrogens == 14:
+        for basis_name in basis_combos.keys():
+            orca_calculations.append(ORCACalculationToPerform(isomer, basis_name))
 
 
 class EXESSCalculationBatch:
@@ -127,11 +152,6 @@ class EXESSCalculationBatch:
         input_path.mkdir(parents=True, exist_ok=True)
         return input_path / f"{self.name()}.json"
 
-
-xtb_graphene_isomers = get_all_graphene_isomers("xTB")
-dft_graphene_isomers = get_all_graphene_isomers("DFT")
-
-all_graphene_isomers = xtb_graphene_isomers + dft_graphene_isomers
 
 selected_isomers = list(
     filter(lambda x: x.carbons <= 32 or x.id < 40, all_graphene_isomers)
