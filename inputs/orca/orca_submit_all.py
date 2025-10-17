@@ -16,7 +16,11 @@ for i, calc in enumerate(common.orca_calculations):
                                         ]
     if dep: 
         cmd += dep.split()
-    cmd.append("orca_pbs.sh")
+
+    if calc.isomer.carbons > 24 or (calc.scf_aux_basis is None and calc.ri_aux_basis is None):
+        cmd.append("orca_pbs_long.sh")
+    else:
+        cmd.append("orca_pbs.sh")
     print(" ".join(cmd))
     res = subprocess.run(cmd, capture_output=True, text=True)
     m = jobid_pat.search(res.stdout)
