@@ -25,10 +25,14 @@ for calc in common.orca_calculations:
     scf_aux_basis = calc.scf_aux_basis
     ri_aux_basis = calc.ri_aux_basis
 
+    nori = False
+    nprocs = 104
     ri_text = ""
     if scf_aux_basis is not None:
         ri_text += f" RIJK"
     if scf_aux_basis is None and ri_aux_basis is None:
+        nori = True
+        nprocs = 10
         ri_text += f" NORI"
     with open(input_path / calc.input_filepath(), "w") as f:
         f.write(
@@ -55,10 +59,17 @@ end
 %mp2
 PS 0.5979
 PT 0.0571
+"""
+            + """MaxCore 43860
+Q1Opt 1
+"""
+            if nori
+            else ""
+            + """
 end
 
 %pal
-nprocs 104
+nprocs {nprocs}
 end
 
 *XYZFILE 0 1 {calc.isomer.xyz_path.resolve()}
