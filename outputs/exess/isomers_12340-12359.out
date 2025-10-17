@@ -1,0 +1,1828 @@
+------------------------------------------------------------------------------
+
+    * Giuseppe Barca         * Hamish Brown           * Jorge Galvez-Vallejo
+    * Andrew Gilbert         * Min Htoo               * Fazeleh Kazemian    
+    * Sean Laguna            * Jack Miller            * Elise Palethorpe    
+    * Oliver Pulsford        * Ross Pure              * Christopher Seidl   
+    * Dylan Silke            * Joshua Singla          * Calum Snowdon       
+    * Ryan Stocks            * Ryan Swart             * Fiona Yu            
+
+
+                 _..--+~/@-~--.      _____  __  __  _____   ____    ____
+             _-=~      (  .   "}    | ____| \ \/ / | ____| / ___|  / ___|
+          _-~     _.--=.\ \""""     |  _|    \  /  |  _|   \___ \  \___ \
+        _~      _-       \ \_\      | |___   /  \  | |___   ___) |  ___) |
+       =      _=          '--'      |_____| /_/\_\ |_____| |____/  |____/
+      '      =
+     :      :     ____            EXtreme-scale Electronic Structure System
+___ |      ;                               Enjoy the power of GPUs!
+    ;       ;                            Gordon Bell Award Winner 2024
+  ___=       \ ___ __     __..-...__
+     :        =_     _.-~~          ~~--.__
+_____ \         ~-+-~                   ___~=_______
+       == ...______ __ ___ _--~~--_
+  
+
+------------------------------------------------------------------------------
+
+Commit no. used aedfa7ed9d5dfb1d6a4530fc669e9d390dc3eedd
+Start of Calculation Local time: 2025-10-17 04:35:11
+Start of Calculation UTC time:   2025-10-17 11:35:11
+├── Calculation params
+│   ├── Title: /global/u2/r/ryans/dhdft/inputs/exess/exess_inputs/isomers_12340-12359
+│   ├── Driver: Energy
+│   ├── Model
+│   │   ├── Theory level: KS DFT
+│   │   ├── Spin configuration: Restricted
+│   │   ├── Primary basis: def2-QZVPP
+│   │   ├── Auxiliary basis: def2-QZVPP-RIFIT
+│   │   ├── Force cartesian basis sets: False
+│   │   ├── Standard orientation: None
+│   ├── Topologies
+│   │   ├── Number of topologies: 20
+│   ├── Keywords
+│   │   ├── SCF keywords
+│   │   │   ├── Max iterations: 50
+│   │   │   ├── Batch size: 2560
+│   │   │   ├── DIIS size: 8
+│   │   │   ├── Convergence threshold: 1.000e-10
+│   │   │   ├── Use guess fallback: False
+│   │   │   ├── Convergence metric: DIIS
+│   │   │   ├── Density threshold: 1.000e-10
+│   │   │   ├── Gradient screening threshold: 1.000e-10
+│   │   │   ├── Allow crap scf: False
+│   │   │   ├── Fock build type: RI
+│   │   │   ├── Group shared exponents: False
+│   │   │   ├── Store RI B tensor on host: False
+│   │   │   ├── Compress B tensor shell pairs: True
+│   │   ├── KS
+│   │   │   ├── Functional: REVDSD-PBEP86-D4(NOFC)
+│   │   │   ├── Method: BatchDense
+│   │   │   ├── Hybrid: True
+│   │   │   ├── Grid
+│   │   │   │   ├── RadialQuad: MuraKnowles
+│   │   │   │   ├── PruningScheme: ROBUST
+│   │   │   │   ├── Consider weight zero: 1.000e-15
+│   │   │   │   ├── Octree
+│   │   │   │   │   ├── Max size: 2048
+│   │   │   │   │   ├── Max depth: 18446744073709551615
+│   │   │   │   │   ├── Max distance: -2147483648
+│   │   │   │   │   ├── Combine small children: Some(1)
+│   │   │   │   ├── GridDefaults: ULTRAFINE
+│   │   │   ├── Use C optimization: False
+│   │   │   ├── Double precision threshold: 1.000e-10
+│   │   │   ├── Batches per batch: 30
+│   │   ├── RTAT keywords
+│   │   │   ├── Enabled: True
+│   │   ├── Debug keywords
+│   │   │   ├── Dry run: False
+│   │   │   ├── Skip calcs: False
+│   │   │   ├── Subfragment XYZ debug: False
+│   │   ├── Export Keywords
+│   │   │   ├── Not exporting any matrices
+│   │   ├── Guess keywords
+│   │   │   ├── Superposition of monomer densities: False
+│   │   │   ├── Superposition of subfragment densities: False
+│   │   │   ├── Basis set projection: False
+│   │   ├── Boundary keywords
+│   │   │   ├── X
+│   │   │   │   ├── Type: None
+│   │   │   ├── Y
+│   │   │   │   ├── Type: None
+│   │   │   ├── Z
+│   │   │   │   ├── Type: None
+│   │   ├── Logging
+│   │   │   ├── Restricted logs visible
+│   │   │   ├── Console logging
+│   │   │   │   ├── Level: INFO
+│   │   │   │   ├── Use log level colors: False
+│   │   ├── Integrals Keywords
+│   │   │   ├── Scheduler: Callback
+│   │   │   ├── Number of streams: 4
+│   ├── System
+│   │   ├── Max GPU Memory: 54 GB
+│   │   ├── Oversubscribe GPUs: False
+│   │   ├── Teams per node: 1
+
+************************************************************
+****** Doing a batched calculation with 20 topologies ******
+************************************************************
+
+************************************************************
+***************** Running topology 1 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2787374 / 14394436 significant shell pairs
+Total number of grid points: 646719 (10104 per atom)
+Created 1859134 / 9326916 significant shell pairs
+Octree generated 418 batches
+Total number of grid points: 646145 (10096 per atom)
+Total number of grid points: 646333 (10098 per atom)
+Octree generated 422 batches
+Total number of grid points: 647043 (10110 per atom)
+Octree generated 409 batches
+Octree generated 430 batches
+Creating 418 batches. Average size: 1316, max size: 2046
+Batching took 0.332519 seconds (31.25 MB)
+Creating 422 batches. Average size: 1302, max size: 2047
+Batching took 0.347498 seconds (31.71 MB)
+Creating 409 batches. Average size: 1346, max size: 2042
+Batching took 0.334522 seconds (30.72 MB)
+Creating 430 batches. Average size: 1281, max size: 2042
+Batching took 0.352575 seconds (32.32 MB)
+One electron integrals and orthogonalizer took 0.614167s
+Created 1859134 / 9326916 significant shell pairs
+3C integrals and B formation took 10.017253s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1624.2389604789 |   2.4351e+03   |   13.7071     |    0.1992
+    2     | -1606.9828484115 |   3.8522e+00   |    2.2433     |    0.1391
+    3     | -1607.6225479353 |   8.5095e-01   |    2.2119     |    0.1420
+    4     | -1607.7235021228 |   2.1295e-01   |    2.2076     |    0.1449
+    5     | -1607.7524523569 |   4.2216e-02   |    2.2116     |    0.1472
+    6     | -1607.7588897865 |   2.5946e-03   |    2.2074     |    0.1501
+    7     | -1607.7593318947 |   6.6693e-04   |    2.2078     |    0.1529
+    8     | -1607.7594483515 |   5.5858e-05   |    2.2162     |    0.1557
+    9     | -1607.7594611264 |   1.1848e-05   |    2.2109     |    0.1565
+   10     | -1607.7594634224 |   9.2421e-07   |    2.2097     |    0.1564
+   11     | -1607.7594637283 |   3.2972e-07   |    2.2089     |    0.1571
+   12     | -1607.7594638400 |   7.0953e-08   |    2.2076     |    0.1556
+   13     | -1607.7594638873 |   1.2471e-08   |    2.2110     |    0.1556
+   14     | -1607.7594638940 |   3.0947e-09   |    2.2092     |    0.1556
+   15     | -1607.7594638953 |   7.6595e-10   |    2.2102     |    0.1556
+   16     | -1607.7594638956 |   2.5387e-10   |    2.2141     |    0.1556
+   17     | -1607.7594638957 |   4.0621e-11   |    2.2082     |    0.1556
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.7594639
+Nuclear Repulsion Energy: 4197.90488303
+Electronic Energy:        -5731.70670504
+XC Energy:                -73.957642
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 63.355s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1859134 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69218042
+E SS:  -2.22289881043
+E MP2: -8.91507923042
+Time:  26.845s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7594638957152711
+MP2 OS Energy: -4.0012546731165148
+MP2 SS Energy: -0.1269275220753596
+MP2 Total Energy: -4.1281821951918740
+MP2 Corrected Energy: -1611.8876460909070829
+=======================================================
+
+
+Topology 0 time: 110.437119 s, performance: SP: 0 FLOP/s, DP: 30.21 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_0.json
+************************************************************
+***************** Running topology 2 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2868417 / 14394436 significant shell pairs
+Created 1918452 / 9326916 significant shell pairs
+Total number of grid points: 647676 (10119 per atom)
+Total number of grid points: 646179 (10096 per atom)
+Total number of grid points: 646794 (10106 per atom)
+Octree generated 409 batches
+Octree generated 420 batches
+Octree generated 416 batches
+Total number of grid points: 645591 (10087 per atom)
+Octree generated 422 batches
+Creating 409 batches. Average size: 1348, max size: 2048
+Batching took 0.326692 seconds (31.01 MB)
+Creating 420 batches. Average size: 1308, max size: 2040
+Batching took 0.336916 seconds (32.01 MB)
+Creating 416 batches. Average size: 1317, max size: 2039
+Batching took 0.337780 seconds (31.79 MB)
+Creating 422 batches. Average size: 1301, max size: 2048
+Batching took 0.334994 seconds (32.15 MB)
+One electron integrals and orthogonalizer took 0.206189s
+Created 1918452 / 9326916 significant shell pairs
+3C integrals and B formation took 7.205682s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.7328523483 |   2.4092e+03   |   10.8640     |    0.1344
+    2     | -1606.9241682670 |   4.3299e+00   |    2.2761     |    0.1379
+    3     | -1607.5745119248 |   1.2159e+00   |    2.2595     |    0.1407
+    4     | -1607.7152588446 |   2.6313e-01   |    2.2537     |    0.1435
+    5     | -1607.7512142420 |   4.6716e-02   |    2.2647     |    0.1464
+    6     | -1607.7582665187 |   3.0590e-03   |    2.2533     |    0.1490
+    7     | -1607.7587584373 |   7.0380e-04   |    2.2507     |    0.1519
+    8     | -1607.7588816208 |   6.5913e-05   |    2.2523     |    0.1538
+    9     | -1607.7588962195 |   1.4205e-05   |    2.2524     |    0.1539
+   10     | -1607.7588989071 |   1.0881e-06   |    2.2526     |    0.1539
+   11     | -1607.7588992087 |   3.4486e-07   |    2.2509     |    0.1539
+   12     | -1607.7588993127 |   5.1411e-08   |    2.2496     |    0.1539
+   13     | -1607.7588993490 |   1.7541e-08   |    2.2500     |    0.1539
+   14     | -1607.7588993563 |   2.9046e-09   |    2.2503     |    0.1539
+   15     | -1607.7588993578 |   1.1659e-09   |    2.2506     |    0.1538
+   16     | -1607.7588993582 |   2.0303e-10   |    2.2525     |    0.1539
+   17     | -1607.7588993583 |   4.3862e-11   |    2.2496     |    0.1539
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.75889936
+Nuclear Repulsion Energy: 4270.24330184
+Electronic Energy:        -5804.0441201
+XC Energy:                -73.958081
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.766s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1918452 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69332418367
+E SS:  -2.22391234395
+E MP2: -8.91723652762
+Time:  26.552s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7588993582792227
+MP2 OS Energy: -4.0019385294190100
+MP2 SS Energy: -0.1269853948392985
+MP2 Total Energy: -4.1289239242583085
+MP2 Corrected Energy: -1611.8878232825375107
+=======================================================
+
+
+Topology 1 time: 85.023543 s, performance: SP: 0 FLOP/s, DP: 39.52 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_1.json
+************************************************************
+***************** Running topology 3 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2812420 / 14394436 significant shell pairs
+Created 1878363 / 9326916 significant shell pairs
+Total number of grid points: 646410 (10100 per atom)
+Total number of grid points: 646917 (10108 per atom)
+Total number of grid points: 647012 (10109 per atom)
+Octree generated 425 batches
+Total number of grid points: 645901 (10092 per atom)
+Octree generated 410 batches
+Octree generated 423 batches
+Octree generated 420 batches
+Creating 425 batches. Average size: 1301, max size: 2039
+Batching took 0.335072 seconds (31.93 MB)
+Creating 410 batches. Average size: 1335, max size: 2046
+Batching took 0.327132 seconds (30.97 MB)
+Creating 423 batches. Average size: 1299, max size: 2048
+Batching took 0.338321 seconds (31.85 MB)
+Creating 420 batches. Average size: 1309, max size: 2045
+Batching took 0.331855 seconds (31.46 MB)
+One electron integrals and orthogonalizer took 0.209429s
+Created 1878363 / 9326916 significant shell pairs
+3C integrals and B formation took 7.104236s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1622.9716120011 |   2.3732e+03   |   10.8104     |    0.1345
+    2     | -1606.9192028236 |   4.4889e+00   |    2.2488     |    0.1377
+    3     | -1607.5516303316 |   1.3464e+00   |    2.2256     |    0.1405
+    4     | -1607.7126013877 |   2.6420e-01   |    2.2257     |    0.1433
+    5     | -1607.7492103433 |   4.9893e-02   |    2.2281     |    0.1461
+    6     | -1607.7566843402 |   2.9873e-03   |    2.2255     |    0.1491
+    7     | -1607.7571444973 |   5.4807e-04   |    2.2302     |    0.1518
+    8     | -1607.7572492906 |   5.0489e-05   |    2.2273     |    0.1539
+    9     | -1607.7572637736 |   1.0877e-05   |    2.2255     |    0.1540
+   10     | -1607.7572662590 |   1.0342e-06   |    2.2242     |    0.1538
+   11     | -1607.7572665337 |   3.4203e-07   |    2.2231     |    0.1538
+   12     | -1607.7572666146 |   4.4805e-08   |    2.2222     |    0.1539
+   13     | -1607.7572666339 |   1.5613e-08   |    2.2209     |    0.1539
+   14     | -1607.7572666392 |   2.9945e-09   |    2.2229     |    0.1539
+   15     | -1607.7572666403 |   7.4324e-10   |    2.2257     |    0.1539
+   16     | -1607.7572666406 |   2.1669e-10   |    2.2213     |    0.1538
+   17     | -1607.7572666407 |   3.9208e-11   |    2.2302     |    0.1537
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.75726664
+Nuclear Repulsion Energy: 4227.58497747
+Electronic Energy:        -5761.38477872
+XC Energy:                -73.957465
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.154s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1878363 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69320261136
+E SS:  -2.22350501514
+E MP2: -8.9167076265
+Time:  26.627s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7572666407413635
+MP2 OS Energy: -4.0018658413328225
+MP2 SS Energy: -0.1269621363644020
+MP2 Total Energy: -4.1288279776972248
+MP2 Corrected Energy: -1611.8860946184386194
+=======================================================
+
+
+Topology 2 time: 84.468279 s, performance: SP: 0 FLOP/s, DP: 39.54 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_2.json
+************************************************************
+***************** Running topology 4 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2821078 / 14394436 significant shell pairs
+Created 1882203 / 9326916 significant shell pairs
+Total number of grid points: 646533 (10102 per atom)
+Total number of grid points: 645918 (10092 per atom)
+Total number of grid points: 645949 (10092 per atom)
+Total number of grid points: 647840 (10122 per atom)
+Octree generated 420 batches
+Octree generated 422 batches
+Octree generated 422 batches
+Octree generated 423 batches
+Creating 420 batches. Average size: 1316, max size: 2045
+Batching took 0.340237 seconds (31.65 MB)
+Creating 422 batches. Average size: 1297, max size: 2045
+Batching took 0.338921 seconds (31.58 MB)
+Creating 422 batches. Average size: 1304, max size: 2044
+Batching took 0.340664 seconds (31.68 MB)
+Creating 423 batches. Average size: 1298, max size: 2039
+Batching took 0.343469 seconds (31.68 MB)
+One electron integrals and orthogonalizer took 0.216950s
+Created 1882203 / 9326916 significant shell pairs
+3C integrals and B formation took 7.156633s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.1246478056 |   2.3821e+03   |   10.8375     |    0.1368
+    2     | -1606.8891141068 |   4.5349e+00   |    2.2287     |    0.1401
+    3     | -1607.5282094530 |   1.3983e+00   |    2.2323     |    0.1430
+    4     | -1607.6974267543 |   2.7796e-01   |    2.2356     |    0.1456
+    5     | -1607.7366154778 |   5.2687e-02   |    2.2309     |    0.1485
+    6     | -1607.7445841599 |   3.3393e-03   |    2.2333     |    0.1513
+    7     | -1607.7451131224 |   6.0683e-04   |    2.2332     |    0.1542
+    8     | -1607.7452337353 |   5.3609e-05   |    2.2350     |    0.1554
+    9     | -1607.7452497665 |   1.1459e-05   |    2.2338     |    0.1556
+   10     | -1607.7452523682 |   1.2478e-06   |    2.2292     |    0.1554
+   11     | -1607.7452527114 |   4.3597e-07   |    2.2300     |    0.1553
+   12     | -1607.7452528266 |   6.8999e-08   |    2.2297     |    0.1555
+   13     | -1607.7452528609 |   2.3625e-08   |    2.2330     |    0.1554
+   14     | -1607.7452528698 |   4.7125e-09   |    2.2380     |    0.1554
+   15     | -1607.7452528720 |   9.6152e-10   |    2.2365     |    0.1553
+   16     | -1607.7452528725 |   3.2593e-10   |    2.2315     |    0.1555
+   17     | -1607.7452528726 |   5.8389e-11   |    2.2322     |    0.1556
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.74525287
+Nuclear Repulsion Energy: 4226.4204114
+Electronic Energy:        -5760.20816659
+XC Energy:                -73.957498
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.368s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1882203 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69652609506
+E SS:  -2.22545746861
+E MP2: -8.92198356367
+Time:  26.561s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7452528726228138
+MP2 OS Energy: -4.0038529522340864
+MP2 SS Energy: -0.1270736214575788
+MP2 Total Energy: -4.1309265736916654
+MP2 Corrected Energy: -1611.8761794463143815
+=======================================================
+
+
+Topology 3 time: 84.617068 s, performance: SP: 0 FLOP/s, DP: 39.52 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_3.json
+************************************************************
+***************** Running topology 5 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2859537 / 14394436 significant shell pairs
+Created 1909603 / 9326916 significant shell pairs
+Total number of grid points: 646320 (10098 per atom)
+Total number of grid points: 646786 (10106 per atom)
+Total number of grid points: 646754 (10105 per atom)
+Octree generated 422 batches
+Total number of grid points: 646380 (10099 per atom)
+Octree generated 426 batches
+Octree generated 422 batches
+Octree generated 424 batches
+Creating 422 batches. Average size: 1302, max size: 2044
+Batching took 0.333367 seconds (31.74 MB)
+Creating 426 batches. Average size: 1294, max size: 2043
+Batching took 0.338009 seconds (32 MB)
+Creating 422 batches. Average size: 1301, max size: 2031
+Batching took 0.336529 seconds (31.77 MB)
+Creating 424 batches. Average size: 1299, max size: 2039
+Batching took 0.336796 seconds (32.03 MB)
+One electron integrals and orthogonalizer took 0.213725s
+Created 1909603 / 9326916 significant shell pairs
+3C integrals and B formation took 7.322374s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1624.5460199948 |   2.4536e+03   |   10.8693     |    0.1336
+    2     | -1606.9823065677 |   3.8005e+00   |    2.3005     |    0.1370
+    3     | -1607.5980574488 |   1.0346e+00   |    2.2852     |    0.1397
+    4     | -1607.7157437060 |   2.7338e-01   |    2.2740     |    0.1424
+    5     | -1607.7551441617 |   4.8311e-02   |    2.2823     |    0.1453
+    6     | -1607.7626232386 |   2.4225e-03   |    2.2691     |    0.1481
+    7     | -1607.7630543525 |   6.0188e-04   |    2.2720     |    0.1510
+    8     | -1607.7631630265 |   7.1881e-05   |    2.2692     |    0.1537
+    9     | -1607.7631790472 |   1.5183e-05   |    2.2759     |    0.1536
+   10     | -1607.7631821076 |   9.5651e-07   |    2.2723     |    0.1538
+   11     | -1607.7631825574 |   4.4947e-07   |    2.2716     |    0.1538
+   12     | -1607.7631827176 |   1.1844e-07   |    2.2718     |    0.1537
+   13     | -1607.7631827856 |   2.8394e-08   |    2.2750     |    0.1539
+   14     | -1607.7631827956 |   5.3385e-09   |    2.2737     |    0.1538
+   15     | -1607.7631827975 |   9.7863e-10   |    2.2720     |    0.1538
+   16     | -1607.7631827979 |   2.6322e-10   |    2.2658     |    0.1537
+   17     | -1607.7631827980 |   4.2163e-11   |    2.2719     |    0.1537
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.7631828
+Nuclear Repulsion Energy: 4265.35744815
+Electronic Energy:        -5799.16028852
+XC Energy:                -73.960342
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.205s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1909603 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.691108394
+E SS:  -2.22381390757
+E MP2: -8.91492230157
+Time:  26.563s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7631827979696482
+MP2 OS Energy: -4.0006137087718221
+MP2 SS Energy: -0.1269797741225270
+MP2 Total Energy: -4.1275934828943495
+MP2 Corrected Energy: -1611.8907762808639745
+=======================================================
+
+
+Topology 4 time: 85.464479 s, performance: SP: 0 FLOP/s, DP: 39.27 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_4.json
+************************************************************
+***************** Running topology 6 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2877323 / 14394436 significant shell pairs
+Created 1920851 / 9326916 significant shell pairs
+Total number of grid points: 646606 (10103 per atom)
+Total number of grid points: 645379 (10084 per atom)
+Total number of grid points: 646967 (10108 per atom)
+Octree generated 416 batches
+Total number of grid points: 647288 (10113 per atom)
+Octree generated 419 batches
+Octree generated 413 batches
+Octree generated 417 batches
+Creating 416 batches. Average size: 1324, max size: 2017
+Batching took 0.335945 seconds (31.52 MB)
+Creating 419 batches. Average size: 1311, max size: 2045
+Batching took 0.337003 seconds (31.84 MB)
+Creating 413 batches. Average size: 1331, max size: 2047
+Batching took 0.331663 seconds (31.34 MB)
+Creating 417 batches. Average size: 1318, max size: 2042
+Batching took 0.335056 seconds (31.69 MB)
+One electron integrals and orthogonalizer took 0.213879s
+Created 1920851 / 9326916 significant shell pairs
+3C integrals and B formation took 7.214021s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1624.1911931429 |   2.4337e+03   |   10.8954     |    0.1354
+    2     | -1606.9377288428 |   3.9572e+00   |    2.2749     |    0.1387
+    3     | -1607.5895056994 |   9.4190e-01   |    2.2745     |    0.1416
+    4     | -1607.7023004293 |   2.3416e-01   |    2.2770     |    0.1443
+    5     | -1607.7351081255 |   5.0912e-02   |    2.2736     |    0.1470
+    6     | -1607.7430883756 |   2.1830e-03   |    2.2777     |    0.1501
+    7     | -1607.7435002960 |   5.9191e-04   |    2.2768     |    0.1529
+    8     | -1607.7436057137 |   6.8808e-05   |    2.2765     |    0.1556
+    9     | -1607.7436198968 |   1.6414e-05   |    2.2759     |    0.1555
+   10     | -1607.7436229101 |   1.1670e-06   |    2.2746     |    0.1555
+   11     | -1607.7436233250 |   4.6070e-07   |    2.2759     |    0.1556
+   12     | -1607.7436234876 |   1.2210e-07   |    2.2758     |    0.1557
+   13     | -1607.7436235600 |   3.3821e-08   |    2.2748     |    0.1555
+   14     | -1607.7436235731 |   6.2655e-09   |    2.2785     |    0.1555
+   15     | -1607.7436235757 |   1.1513e-09   |    2.2770     |    0.1557
+   16     | -1607.7436235762 |   2.5536e-10   |    2.2767     |    0.1557
+   17     | -1607.7436235763 |   4.5452e-11   |    2.2754     |    0.1556
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.74362358
+Nuclear Repulsion Energy: 4276.9754743
+Electronic Energy:        -5810.75952088
+XC Energy:                -73.959577
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.178s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1920851 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69763144738
+E SS:  -2.22750886903
+E MP2: -8.92514031641
+Time:  26.377s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7436235762704655
+MP2 OS Energy: -4.0045138423889144
+MP2 SS Energy: -0.1271907564217082
+MP2 Total Energy: -4.1317045988106225
+MP2 Corrected Energy: -1611.8753281750809947
+=======================================================
+
+
+Topology 5 time: 85.258761 s, performance: SP: 0 FLOP/s, DP: 39.41 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_5.json
+************************************************************
+***************** Running topology 7 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2900866 / 14394436 significant shell pairs
+Created 1938006 / 9326916 significant shell pairs
+Total number of grid points: 646585 (10102 per atom)
+Total number of grid points: 646900 (10107 per atom)
+Total number of grid points: 646383 (10099 per atom)
+Octree generated 415 batches
+Octree generated 409 batches
+Total number of grid points: 646372 (10099 per atom)
+Octree generated 423 batches
+Octree generated 419 batches
+Creating 415 batches. Average size: 1322, max size: 2038
+Batching took 0.333585 seconds (31.66 MB)
+Creating 409 batches. Average size: 1347, max size: 2045
+Batching took 0.330280 seconds (31.06 MB)
+Creating 423 batches. Average size: 1300, max size: 2047
+Batching took 0.341067 seconds (32.27 MB)
+Creating 419 batches. Average size: 1315, max size: 2043
+Batching took 0.336508 seconds (32.05 MB)
+One electron integrals and orthogonalizer took 0.215518s
+Created 1938006 / 9326916 significant shell pairs
+3C integrals and B formation took 7.405561s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1625.4147873200 |   2.4926e+03   |   10.8759     |    0.1337
+    2     | -1606.9638214638 |   3.8410e+00   |    2.3050     |    0.1372
+    3     | -1607.6011916973 |   9.6014e-01   |    2.2930     |    0.1398
+    4     | -1607.7196093956 |   2.0784e-01   |    2.2844     |    0.1426
+    5     | -1607.7494236970 |   4.0887e-02   |    2.2963     |    0.1456
+    6     | -1607.7557055771 |   2.4143e-03   |    2.2835     |    0.1482
+    7     | -1607.7561431732 |   5.3416e-04   |    2.2859     |    0.1511
+    8     | -1607.7562390035 |   6.5741e-05   |    2.2880     |    0.1539
+    9     | -1607.7562513137 |   1.1234e-05   |    2.2855     |    0.1538
+   10     | -1607.7562532253 |   7.8313e-07   |    2.2831     |    0.1541
+   11     | -1607.7562534202 |   2.1746e-07   |    2.2847     |    0.1539
+   12     | -1607.7562534799 |   4.3348e-08   |    2.2814     |    0.1539
+   13     | -1607.7562534991 |   1.4273e-08   |    2.2822     |    0.1539
+   14     | -1607.7562535034 |   2.5504e-09   |    2.2860     |    0.1539
+   15     | -1607.7562535043 |   4.9114e-10   |    2.2838     |    0.1539
+   16     | -1607.7562535045 |   1.6872e-10   |    2.2819     |    0.1539
+   17     | -1607.7562535045 |   2.9308e-11   |    2.2837     |    0.1539
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.7562535
+Nuclear Repulsion Energy: 4302.74572104
+Electronic Energy:        -5836.53962872
+XC Energy:                -73.962346
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.505s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1938006 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69400100976
+E SS:  -2.22688255795
+E MP2: -8.92088356772
+Time:  26.405s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7562535045472032
+MP2 OS Energy: -4.0023432037359346
+MP2 SS Energy: -0.1271549940592255
+MP2 Total Energy: -4.1294981977951597
+MP2 Corrected Energy: -1611.8857517023423043
+=======================================================
+
+
+Topology 6 time: 85.617032 s, performance: SP: 0 FLOP/s, DP: 39.31 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_6.json
+************************************************************
+***************** Running topology 8 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2812596 / 14394436 significant shell pairs
+Created 1874796 / 9326916 significant shell pairs
+Total number of grid points: 646651 (10103 per atom)
+Total number of grid points: 646867 (10107 per atom)
+Total number of grid points: 646429 (10100 per atom)
+Octree generated 410 batches
+Octree generated 417 batches
+Octree generated 416 batches
+Total number of grid points: 646293 (10098 per atom)
+Octree generated 427 batches
+Creating 410 batches. Average size: 1341, max size: 2047
+Batching took 0.331580 seconds (30.85 MB)
+Creating 417 batches. Average size: 1318, max size: 2045
+Batching took 0.330286 seconds (31.16 MB)
+Creating 416 batches. Average size: 1328, max size: 2047
+Batching took 0.335693 seconds (31.27 MB)
+Creating 427 batches. Average size: 1286, max size: 2041
+Batching took 0.339664 seconds (32.03 MB)
+One electron integrals and orthogonalizer took 0.218786s
+Created 1874796 / 9326916 significant shell pairs
+3C integrals and B formation took 6.943520s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1624.2731209401 |   2.4459e+03   |   10.8399     |    0.1356
+    2     | -1607.0115841913 |   3.7345e+00   |    2.2350     |    0.1389
+    3     | -1607.6243189370 |   9.0847e-01   |    2.2337     |    0.1415
+    4     | -1607.7279330680 |   2.4518e-01   |    2.2365     |    0.1443
+    5     | -1607.7632210988 |   3.6929e-02   |    2.2362     |    0.1472
+    6     | -1607.7689488559 |   1.8359e-03   |    2.2381     |    0.1502
+    7     | -1607.7692814196 |   5.2250e-04   |    2.2334     |    0.1532
+    8     | -1607.7693719338 |   6.3268e-05   |    2.2333     |    0.1557
+    9     | -1607.7693856346 |   1.4500e-05   |    2.2382     |    0.1558
+   10     | -1607.7693883730 |   9.4715e-07   |    2.2348     |    0.1558
+   11     | -1607.7693887582 |   3.4688e-07   |    2.2357     |    0.1556
+   12     | -1607.7693888931 |   1.0055e-07   |    2.2347     |    0.1557
+   13     | -1607.7693889512 |   2.3110e-08   |    2.2337     |    0.1557
+   14     | -1607.7693889594 |   4.2599e-09   |    2.2362     |    0.1556
+   15     | -1607.7693889609 |   6.5637e-10   |    2.2342     |    0.1557
+   16     | -1607.7693889611 |   1.7191e-10   |    2.2410     |    0.1557
+   17     | -1607.7693889612 |   3.2432e-11   |    2.2369     |    0.1558
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.76938896
+Nuclear Repulsion Energy: 4209.38887361
+Electronic Energy:        -5743.19724677
+XC Energy:                -73.961016
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.239s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1874796 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.68836820987
+E SS:  -2.22273950209
+E MP2: -8.91110771196
+Time:  26.457s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7693889611698523
+MP2 OS Energy: -3.9989753526839538
+MP2 SS Energy: -0.1269184255693470
+MP2 Total Energy: -4.1258937782533005
+MP2 Corrected Energy: -1611.8952827394232372
+=======================================================
+
+
+Topology 7 time: 84.382176 s, performance: SP: 0 FLOP/s, DP: 39.56 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_7.json
+************************************************************
+***************** Running topology 9 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2877681 / 14394436 significant shell pairs
+Created 1922804 / 9326916 significant shell pairs
+Total number of grid points: 646646 (10103 per atom)
+Total number of grid points: 645543 (10086 per atom)
+Total number of grid points: 647613 (10118 per atom)
+Total number of grid points: 646438 (10100 per atom)
+Octree generated 425 batches
+Octree generated 420 batches
+Octree generated 419 batches
+Octree generated 413 batches
+Creating 425 batches. Average size: 1297, max size: 2043
+Batching took 0.339032 seconds (32.15 MB)
+Creating 420 batches. Average size: 1307, max size: 2044
+Batching took 0.336939 seconds (31.6 MB)
+Creating 413 batches. Average size: 1328, max size: 2046
+Batching took 0.333959 seconds (31.31 MB)
+Creating 419 batches. Average size: 1312, max size: 2036
+Batching took 0.334680 seconds (31.8 MB)
+One electron integrals and orthogonalizer took 0.218560s
+Created 1922804 / 9326916 significant shell pairs
+3C integrals and B formation took 7.169685s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.8279419053 |   2.4198e+03   |   10.8575     |    0.1336
+    2     | -1606.9431783453 |   4.2527e+00   |    2.2669     |    0.1369
+    3     | -1607.5741400069 |   1.2855e+00   |    2.2633     |    0.1397
+    4     | -1607.7215343880 |   2.8301e-01   |    2.2690     |    0.1427
+    5     | -1607.7614485224 |   4.5257e-02   |    2.2654     |    0.1455
+    6     | -1607.7683290766 |   2.4911e-03   |    2.2634     |    0.1481
+    7     | -1607.7687355421 |   6.6299e-04   |    2.2658     |    0.1510
+    8     | -1607.7688507278 |   7.2444e-05   |    2.2628     |    0.1538
+    9     | -1607.7688667112 |   1.5276e-05   |    2.2650     |    0.1538
+   10     | -1607.7688696926 |   1.0564e-06   |    2.2627     |    0.1538
+   11     | -1607.7688700804 |   3.6168e-07   |    2.2634     |    0.1538
+   12     | -1607.7688702178 |   8.6580e-08   |    2.2631     |    0.1539
+   13     | -1607.7688702748 |   2.5588e-08   |    2.2621     |    0.1538
+   14     | -1607.7688702839 |   4.1964e-09   |    2.2648     |    0.1537
+   15     | -1607.7688702855 |   8.0315e-10   |    2.2683     |    0.1539
+   16     | -1607.7688702857 |   1.9504e-10   |    2.2658     |    0.1538
+   17     | -1607.7688702858 |   3.2854e-11   |    2.2629     |    0.1538
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.76887029
+Nuclear Repulsion Energy: 4273.23634219
+Electronic Energy:        -5807.0440284
+XC Energy:                -73.961184
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.853s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1922804 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.68938422563
+E SS:  -2.22362021609
+E MP2: -8.91300444172
+Time:  26.383s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7688702857822136
+MP2 OS Energy: -3.9995828285029993
+MP2 SS Energy: -0.1269687143387339
+MP2 Total Energy: -4.1265515428417334
+MP2 Corrected Energy: -1611.8954218286239666
+=======================================================
+
+
+Topology 8 time: 84.945525 s, performance: SP: 0 FLOP/s, DP: 39.52 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_8.json
+************************************************************
+**************** Running topology 10 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2903896 / 14394436 significant shell pairs
+Created 1942444 / 9326916 significant shell pairs
+Total number of grid points: 646049 (10094 per atom)
+Total number of grid points: 646845 (10106 per atom)
+Total number of grid points: 645961 (10093 per atom)
+Total number of grid points: 647385 (10115 per atom)
+Octree generated 413 batches
+Octree generated 419 batches
+Octree generated 413 batches
+Octree generated 419 batches
+Creating 413 batches. Average size: 1329, max size: 2040
+Batching took 0.335640 seconds (31.43 MB)
+Creating 419 batches. Average size: 1312, max size: 2041
+Batching took 0.336326 seconds (31.84 MB)
+Creating 413 batches. Average size: 1330, max size: 2047
+Batching took 0.331820 seconds (31.64 MB)
+Creating 419 batches. Average size: 1313, max size: 2040
+Batching took 0.334823 seconds (31.96 MB)
+One electron integrals and orthogonalizer took 0.220579s
+Created 1942444 / 9326916 significant shell pairs
+3C integrals and B formation took 7.363662s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.7389653357 |   2.4195e+03   |   10.8312     |    0.1339
+    2     | -1606.9855303841 |   3.9275e+00   |    2.2760     |    0.1372
+    3     | -1607.6026486453 |   1.0270e+00   |    2.2803     |    0.1399
+    4     | -1607.7197398757 |   2.6019e-01   |    2.2770     |    0.1427
+    5     | -1607.7567230114 |   4.2646e-02   |    2.2864     |    0.1457
+    6     | -1607.7633003385 |   1.6740e-03   |    2.2835     |    0.1483
+    7     | -1607.7636176551 |   4.0368e-04   |    2.2815     |    0.1512
+    8     | -1607.7636922127 |   5.8652e-05   |    2.2808     |    0.1540
+    9     | -1607.7637057372 |   1.1831e-05   |    2.2804     |    0.1540
+   10     | -1607.7637081171 |   8.7716e-07   |    2.2860     |    0.1540
+   11     | -1607.7637084982 |   4.1098e-07   |    2.2780     |    0.1541
+   12     | -1607.7637086349 |   8.2040e-08   |    2.2812     |    0.1540
+   13     | -1607.7637086943 |   1.9501e-08   |    2.2805     |    0.1540
+   14     | -1607.7637087020 |   4.0665e-09   |    2.2775     |    0.1539
+   15     | -1607.7637087034 |   9.7334e-10   |    2.2776     |    0.1543
+   16     | -1607.7637087037 |   2.1009e-10   |    2.2777     |    0.1541
+   17     | -1607.7637087038 |   3.7187e-11   |    2.2805     |    0.1540
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.7637087
+Nuclear Repulsion Energy: 4304.46054885
+Electronic Energy:        -5838.26354535
+XC Energy:                -73.960712
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.302s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1942444 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69154010495
+E SS:  -2.22452486463
+E MP2: -8.91606496958
+Time:  26.391s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7637087038015125
+MP2 OS Energy: -4.0008718287492906
+MP2 SS Energy: -0.1270203697703317
+MP2 Total Energy: -4.1278921985196222
+MP2 Corrected Energy: -1611.8916009023212155
+=======================================================
+
+
+Topology 9 time: 85.409468 s, performance: SP: 0 FLOP/s, DP: 39.4 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_9.json
+************************************************************
+**************** Running topology 11 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2886685 / 14394436 significant shell pairs
+Created 1927138 / 9326916 significant shell pairs
+Total number of grid points: 646525 (10101 per atom)
+Total number of grid points: 646447 (10100 per atom)
+Total number of grid points: 646883 (10107 per atom)
+Octree generated 415 batches
+Octree generated 422 batches
+Total number of grid points: 646385 (10099 per atom)
+Octree generated 415 batches
+Octree generated 421 batches
+Creating 415 batches. Average size: 1321, max size: 2048
+Batching took 0.331002 seconds (31.75 MB)
+Creating 422 batches. Average size: 1304, max size: 2036
+Batching took 0.337847 seconds (32.02 MB)
+Creating 415 batches. Average size: 1326, max size: 2040
+Batching took 0.333592 seconds (31.79 MB)
+Creating 421 batches. Average size: 1304, max size: 2045
+Batching took 0.337662 seconds (32.08 MB)
+One electron integrals and orthogonalizer took 0.226008s
+Created 1927138 / 9326916 significant shell pairs
+3C integrals and B formation took 7.283517s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.6849539220 |   2.4125e+03   |   10.8721     |    0.1339
+    2     | -1606.9147402674 |   4.2458e+00   |    2.2776     |    0.1371
+    3     | -1607.5593153800 |   1.1908e+00   |    2.2763     |    0.1400
+    4     | -1607.7002132172 |   2.4022e-01   |    2.2774     |    0.1427
+    5     | -1607.7335628018 |   4.3629e-02   |    2.2796     |    0.1456
+    6     | -1607.7401349587 |   2.8040e-03   |    2.2736     |    0.1483
+    7     | -1607.7405914033 |   6.2895e-04   |    2.2802     |    0.1514
+    8     | -1607.7407062201 |   5.8681e-05   |    2.2763     |    0.1541
+    9     | -1607.7407201948 |   1.1946e-05   |    2.2755     |    0.1540
+   10     | -1607.7407224989 |   1.2373e-06   |    2.2769     |    0.1541
+   11     | -1607.7407227986 |   3.8277e-07   |    2.2726     |    0.1541
+   12     | -1607.7407229039 |   6.1778e-08   |    2.2742     |    0.1540
+   13     | -1607.7407229378 |   1.4007e-08   |    2.2748     |    0.1540
+   14     | -1607.7407229439 |   2.9667e-09   |    2.2704     |    0.1540
+   15     | -1607.7407229452 |   6.9116e-10   |    2.2748     |    0.1540
+   16     | -1607.7407229454 |   1.9185e-10   |    2.2733     |    0.1539
+   17     | -1607.7407229455 |   3.3793e-11   |    2.2763     |    0.1540
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.74072295
+Nuclear Repulsion Energy: 4282.77865344
+Electronic Energy:        -5816.56021746
+XC Energy:                -73.959159
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.205s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1927138 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69859048927
+E SS:  -2.22796771372
+E MP2: -8.92655820299
+Time:  26.355s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7407229454954631
+MP2 OS Energy: -4.0050872535336959
+MP2 SS Energy: -0.1272169564532158
+MP2 Total Energy: -4.1323042099869118
+MP2 Corrected Energy: -1611.8730271554823048
+=======================================================
+
+
+Topology 10 time: 85.266025 s, performance: SP: 0 FLOP/s, DP: 39.41 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_10.json
+************************************************************
+**************** Running topology 12 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2854482 / 14394436 significant shell pairs
+Created 1904115 / 9326916 significant shell pairs
+Total number of grid points: 646553 (10102 per atom)
+Total number of grid points: 646384 (10099 per atom)
+Total number of grid points: 646819 (10106 per atom)
+Total number of grid points: 646484 (10101 per atom)
+Octree generated 421 batches
+Octree generated 429 batches
+Octree generated 421 batches
+Octree generated 421 batches
+Creating 421 batches. Average size: 1307, max size: 2045
+Batching took 0.337576 seconds (31.63 MB)
+Creating 429 batches. Average size: 1281, max size: 2044
+Batching took 0.338848 seconds (32.21 MB)
+Creating 421 batches. Average size: 1306, max size: 2046
+Batching took 0.336597 seconds (32.02 MB)
+Creating 421 batches. Average size: 1303, max size: 2042
+Batching took 0.337167 seconds (31.98 MB)
+One electron integrals and orthogonalizer took 0.225224s
+Created 1904115 / 9326916 significant shell pairs
+3C integrals and B formation took 7.173050s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1622.8346912950 |   2.3753e+03   |   10.8763     |    0.1336
+    2     | -1606.9168807344 |   4.4531e+00   |    2.2557     |    0.1370
+    3     | -1607.5589234371 |   1.2670e+00   |    2.2561     |    0.1397
+    4     | -1607.7094052722 |   2.5095e-01   |    2.2588     |    0.1426
+    5     | -1607.7440884621 |   4.1623e-02   |    2.2555     |    0.1454
+    6     | -1607.7502290785 |   2.2579e-03   |    2.2582     |    0.1481
+    7     | -1607.7505850884 |   4.5551e-04   |    2.2572     |    0.1511
+    8     | -1607.7506708027 |   4.3986e-05   |    2.2583     |    0.1538
+    9     | -1607.7506820908 |   9.8333e-06   |    2.2575     |    0.1538
+   10     | -1607.7506840127 |   1.0327e-06   |    2.2601     |    0.1537
+   11     | -1607.7506842800 |   2.7029e-07   |    2.2574     |    0.1537
+   12     | -1607.7506843606 |   5.3589e-08   |    2.2625     |    0.1538
+   13     | -1607.7506843918 |   1.4087e-08   |    2.2587     |    0.1538
+   14     | -1607.7506843984 |   3.1063e-09   |    2.2571     |    0.1538
+   15     | -1607.7506843997 |   7.5049e-10   |    2.2501     |    0.1537
+   16     | -1607.7506844000 |   1.5513e-10   |    2.2574     |    0.1537
+   17     | -1607.7506844000 |   3.5049e-11   |    2.2586     |    0.1537
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.7506844
+Nuclear Repulsion Energy: 4250.94560972
+Electronic Energy:        -5784.73625948
+XC Energy:                -73.960035
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.781s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1904115 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69539079214
+E SS:  -2.22641436962
+E MP2: -8.92180516177
+Time:  26.531s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7506844000458841
+MP2 OS Energy: -4.0031741546213864
+MP2 SS Energy: -0.1271282605055780
+MP2 Total Energy: -4.1303024151269643
+MP2 Corrected Energy: -1611.8809868151729461
+=======================================================
+
+
+Topology 11 time: 85.012308 s, performance: SP: 0 FLOP/s, DP: 39.4 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_11.json
+************************************************************
+**************** Running topology 13 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2872746 / 14394436 significant shell pairs
+Created 1917268 / 9326916 significant shell pairs
+Total number of grid points: 646247 (10097 per atom)
+Total number of grid points: 647336 (10114 per atom)
+Total number of grid points: 646346 (10099 per atom)
+Total number of grid points: 646311 (10098 per atom)
+Octree generated 422 batches
+Octree generated 425 batches
+Octree generated 414 batches
+Octree generated 414 batches
+Creating 422 batches. Average size: 1305, max size: 2047
+Batching took 0.337502 seconds (32 MB)
+Creating 414 batches. Average size: 1323, max size: 2046
+Batching took 0.333152 seconds (31.56 MB)
+Creating 414 batches. Average size: 1323, max size: 2043
+Batching took 0.334162 seconds (31.53 MB)
+Creating 425 batches. Average size: 1299, max size: 2041
+Batching took 0.339834 seconds (32.06 MB)
+One electron integrals and orthogonalizer took 0.224859s
+Created 1917268 / 9326916 significant shell pairs
+3C integrals and B formation took 7.256386s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.6029985014 |   2.4164e+03   |   10.8677     |    0.1335
+    2     | -1606.9596943860 |   4.0635e+00   |    2.2837     |    0.1369
+    3     | -1607.5639454631 |   1.1814e+00   |    2.2814     |    0.1397
+    4     | -1607.7022336333 |   2.7353e-01   |    2.2778     |    0.1424
+    5     | -1607.7408738869 |   4.3053e-02   |    2.2853     |    0.1453
+    6     | -1607.7472433691 |   2.4387e-03   |    2.2801     |    0.1482
+    7     | -1607.7476270431 |   4.4690e-04   |    2.2793     |    0.1509
+    8     | -1607.7477133191 |   5.5102e-05   |    2.2846     |    0.1537
+    9     | -1607.7477260673 |   9.4877e-06   |    2.2856     |    0.1538
+   10     | -1607.7477278554 |   8.4120e-07   |    2.2792     |    0.1538
+   11     | -1607.7477280382 |   1.7885e-07   |    2.2839     |    0.1537
+   12     | -1607.7477280778 |   2.2012e-08   |    2.2828     |    0.1537
+   13     | -1607.7477280859 |   6.3082e-09   |    2.2809     |    0.1538
+   14     | -1607.7477280878 |   1.1258e-09   |    2.2972     |    0.1538
+   15     | -1607.7477280881 |   3.1663e-10   |    2.2894     |    0.1538
+   16     | -1607.7477280882 |   5.8483e-11   |    2.2861     |    0.1538
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.74772809
+Nuclear Repulsion Energy: 4262.65990976
+Electronic Energy:        -5796.44776299
+XC Energy:                -73.959875
+Converged:                1
+# of SCF iterations:      16
+SCF Time:                 55.82s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1917268 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69622949765
+E SS:  -2.22701911388
+E MP2: -8.92324861153
+Time:  26.367s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7477280881810202
+MP2 OS Energy: -4.0036756166435152
+MP2 SS Energy: -0.1271627914027859
+MP2 Total Energy: -4.1308384080463014
+MP2 Corrected Energy: -1611.8785664962272222
+=======================================================
+
+
+Topology 12 time: 82.894474 s, performance: SP: 0 FLOP/s, DP: 39.87 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_12.json
+************************************************************
+**************** Running topology 14 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2853479 / 14394436 significant shell pairs
+Created 1904686 / 9326916 significant shell pairs
+Total number of grid points: 645931 (10092 per atom)
+Total number of grid points: 646882 (10107 per atom)
+Octree generated 420 batches
+Total number of grid points: 646883 (10107 per atom)
+Octree generated 425 batches
+Total number of grid points: 646544 (10102 per atom)
+Octree generated 407 batches
+Octree generated 419 batches
+Creating 420 batches. Average size: 1311, max size: 2046
+Batching took 0.336554 seconds (31.75 MB)
+Creating 425 batches. Average size: 1300, max size: 2041
+Batching took 0.338811 seconds (32.02 MB)
+Creating 407 batches. Average size: 1351, max size: 2047
+Batching took 0.335387 seconds (31.07 MB)
+Creating 419 batches. Average size: 1305, max size: 2040
+Batching took 0.336014 seconds (31.65 MB)
+One electron integrals and orthogonalizer took 0.228641s
+Created 1904686 / 9326916 significant shell pairs
+3C integrals and B formation took 7.164330s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.8357888285 |   2.4128e+03   |   10.8616     |    0.1351
+    2     | -1606.9198256201 |   4.2350e+00   |    2.2742     |    0.1385
+    3     | -1607.5802069821 |   1.0801e+00   |    2.2751     |    0.1414
+    4     | -1607.7075335483 |   2.5087e-01   |    2.2744     |    0.1442
+    5     | -1607.7415175170 |   4.8406e-02   |    2.2754     |    0.1468
+    6     | -1607.7489074512 |   2.8524e-03   |    2.2779     |    0.1497
+    7     | -1607.7493706068 |   7.6597e-04   |    2.2735     |    0.1527
+    8     | -1607.7495088735 |   5.7986e-05   |    2.2757     |    0.1554
+    9     | -1607.7495221269 |   1.2589e-05   |    2.2742     |    0.1554
+   10     | -1607.7495243773 |   1.0354e-06   |    2.2775     |    0.1554
+   11     | -1607.7495246073 |   2.8385e-07   |    2.2749     |    0.1553
+   12     | -1607.7495246774 |   3.5730e-08   |    2.2748     |    0.1555
+   13     | -1607.7495246966 |   1.1459e-08   |    2.2745     |    0.1553
+   14     | -1607.7495247003 |   2.0607e-09   |    2.2741     |    0.1554
+   15     | -1607.7495247011 |   4.8620e-10   |    2.2744     |    0.1553
+   16     | -1607.7495247013 |   1.2505e-10   |    2.2906     |    0.1554
+   17     | -1607.7495247013 |   2.6234e-11   |    2.2853     |    0.1555
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.7495247
+Nuclear Repulsion Energy: 4249.87506828
+Electronic Energy:        -5783.66622556
+XC Energy:                -73.958367
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.144s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1904686 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69579100608
+E SS:  -2.22576841366
+E MP2: -8.92155941974
+Time:  26.624s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7495247013098378
+MP2 OS Energy: -4.0034134425335903
+MP2 SS Energy: -0.1270913764202036
+MP2 Total Energy: -4.1305048189537938
+MP2 Corrected Energy: -1611.8800295202636335
+=======================================================
+
+
+Topology 13 time: 85.466084 s, performance: SP: 0 FLOP/s, DP: 39.24 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_13.json
+************************************************************
+**************** Running topology 15 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2818452 / 14394436 significant shell pairs
+Created 1881125 / 9326916 significant shell pairs
+Total number of grid points: 646764 (10105 per atom)
+Total number of grid points: 646195 (10096 per atom)
+Total number of grid points: 646829 (10106 per atom)
+Octree generated 412 batches
+Octree generated 411 batches
+Total number of grid points: 646452 (10100 per atom)
+Octree generated 428 batches
+Octree generated 416 batches
+Creating 412 batches. Average size: 1333, max size: 2046
+Batching took 0.327719 seconds (31.21 MB)
+Creating 411 batches. Average size: 1334, max size: 2048
+Batching took 0.331637 seconds (30.93 MB)
+Creating 428 batches. Average size: 1299, max size: 2044
+Batching took 0.339283 seconds (32.18 MB)
+Creating 416 batches. Average size: 1317, max size: 2047
+Batching took 0.330325 seconds (31.11 MB)
+One electron integrals and orthogonalizer took 0.224030s
+Created 1881125 / 9326916 significant shell pairs
+3C integrals and B formation took 7.069796s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1624.2438734328 |   2.4181e+03   |   10.8377     |    0.1337
+    2     | -1606.9107915855 |   4.2872e+00   |    2.2591     |    0.1372
+    3     | -1607.5771027224 |   1.1620e+00   |    2.2540     |    0.1400
+    4     | -1607.7169493392 |   2.5457e-01   |    2.2580     |    0.1425
+    5     | -1607.7517772457 |   5.9661e-02   |    2.2577     |    0.1454
+    6     | -1607.7609807991 |   3.0898e-03   |    2.2571     |    0.1483
+    7     | -1607.7614940804 |   8.0460e-04   |    2.2638     |    0.1511
+    8     | -1607.7616417365 |   5.6996e-05   |    2.2541     |    0.1539
+    9     | -1607.7616556768 |   9.7542e-06   |    2.2544     |    0.1538
+   10     | -1607.7616574620 |   7.3001e-07   |    2.2541     |    0.1538
+   11     | -1607.7616576554 |   2.3015e-07   |    2.2552     |    0.1538
+   12     | -1607.7616577115 |   3.5287e-08   |    2.2559     |    0.1539
+   13     | -1607.7616577271 |   1.3795e-08   |    2.2544     |    0.1538
+   14     | -1607.7616577308 |   1.5884e-09   |    2.2538     |    0.1539
+   15     | -1607.7616577314 |   3.2442e-10   |    2.2564     |    0.1538
+   16     | -1607.7616577315 |   1.0354e-10   |    2.2544     |    0.1540
+   17     | -1607.7616577316 |   2.0429e-11   |    2.2527     |    0.1539
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.76165773
+Nuclear Repulsion Energy: 4225.2268151
+Electronic Energy:        -5759.03045636
+XC Energy:                -73.958016
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.626s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1881125 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69192534218
+E SS:  -2.22308719025
+E MP2: -8.91501253243
+Time:  26.603s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7616577315543509
+MP2 OS Energy: -4.0011021620886078
+MP2 SS Energy: -0.1269382785630747
+MP2 Total Energy: -4.1280404406516826
+MP2 Corrected Energy: -1611.8896981722059536
+=======================================================
+
+
+Topology 14 time: 84.922812 s, performance: SP: 0 FLOP/s, DP: 39.42 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_14.json
+************************************************************
+**************** Running topology 16 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2929741 / 14394436 significant shell pairs
+Created 1958361 / 9326916 significant shell pairs
+Total number of grid points: 646488 (10101 per atom)
+Total number of grid points: 646007 (10093 per atom)
+Total number of grid points: 647192 (10112 per atom)
+Total number of grid points: 646553 (10102 per atom)
+Octree generated 411 batches
+Octree generated 410 batches
+Octree generated 416 batches
+Octree generated 418 batches
+Creating 411 batches. Average size: 1340, max size: 2048
+Batching took 0.336071 seconds (31.55 MB)
+Creating 410 batches. Average size: 1338, max size: 2046
+Batching took 0.337610 seconds (31.54 MB)
+Creating 416 batches. Average size: 1320, max size: 2043
+Batching took 0.343374 seconds (31.89 MB)
+Creating 418 batches. Average size: 1314, max size: 2048
+Batching took 0.340059 seconds (32.04 MB)
+One electron integrals and orthogonalizer took 0.225448s
+Created 1958361 / 9326916 significant shell pairs
+3C integrals and B formation took 7.427466s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1622.2764923875 |   2.3427e+03   |   10.8523     |    0.1339
+    2     | -1606.8582059824 |   4.8358e+00   |    2.3320     |    0.1372
+    3     | -1607.5411647685 |   1.3777e+00   |    2.3068     |    0.1399
+    4     | -1607.7054326119 |   2.4327e-01   |    2.2996     |    0.1427
+    5     | -1607.7380596682 |   4.5599e-02   |    2.3040     |    0.1457
+    6     | -1607.7447974217 |   2.4142e-03   |    2.3070     |    0.1484
+    7     | -1607.7451816757 |   6.7713e-04   |    2.3038     |    0.1512
+    8     | -1607.7453007604 |   4.9642e-05   |    2.2994     |    0.1539
+    9     | -1607.7453133521 |   1.3401e-05   |    2.3030     |    0.1539
+   10     | -1607.7453157299 |   1.0038e-06   |    2.3052     |    0.1540
+   11     | -1607.7453159417 |   2.6274e-07   |    2.3023     |    0.1539
+   12     | -1607.7453160002 |   3.3293e-08   |    2.3089     |    0.1539
+   13     | -1607.7453160157 |   1.2324e-08   |    2.2989     |    0.1539
+   14     | -1607.7453160201 |   2.8440e-09   |    2.2999     |    0.1539
+   15     | -1607.7453160212 |   5.7227e-10   |    2.3031     |    0.1539
+   16     | -1607.7453160214 |   1.4218e-10   |    2.2999     |    0.1540
+   17     | -1607.7453160215 |   2.4606e-11   |    2.3031     |    0.1540
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.74531602
+Nuclear Repulsion Energy: 4321.25541393
+Electronic Energy:        -5855.03964169
+XC Energy:                -73.961088
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.777s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1958361 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69772126335
+E SS:  -2.22784121797
+E MP2: -8.92556248132
+Time:  26.617s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7453160214613490
+MP2 OS Energy: -4.0045675433587222
+MP2 SS Energy: -0.1272097335460057
+MP2 Total Energy: -4.1317772769047281
+MP2 Corrected Energy: -1611.8770932983661623
+=======================================================
+
+
+Topology 15 time: 86.102743 s, performance: SP: 0 FLOP/s, DP: 39.29 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_15.json
+************************************************************
+**************** Running topology 17 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2797629 / 14394436 significant shell pairs
+Created 1865900 / 9326916 significant shell pairs
+Total number of grid points: 646392 (10099 per atom)
+Total number of grid points: 646381 (10099 per atom)
+Total number of grid points: 646193 (10096 per atom)
+Total number of grid points: 647274 (10113 per atom)
+Octree generated 423 batches
+Octree generated 421 batches
+Octree generated 428 batches
+Octree generated 419 batches
+Creating 421 batches. Average size: 1306, max size: 2038
+Batching took 0.337540 seconds (31.53 MB)
+Creating 423 batches. Average size: 1301, max size: 2047
+Batching took 0.335554 seconds (31.74 MB)
+Creating 428 batches. Average size: 1287, max size: 2041
+Batching took 0.335725 seconds (31.99 MB)
+Creating 419 batches. Average size: 1318, max size: 2048
+Batching took 0.334986 seconds (31.55 MB)
+One electron integrals and orthogonalizer took 0.224777s
+Created 1865900 / 9326916 significant shell pairs
+3C integrals and B formation took 7.042622s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.2418732041 |   2.3806e+03   |   10.8176     |    0.1352
+    2     | -1606.9309311619 |   4.3730e+00   |    2.2435     |    0.1386
+    3     | -1607.5927106559 |   1.1310e+00   |    2.2416     |    0.1414
+    4     | -1607.7286671651 |   2.2937e-01   |    2.2443     |    0.1440
+    5     | -1607.7598343833 |   4.7097e-02   |    2.2462     |    0.1469
+    6     | -1607.7669139950 |   2.4645e-03   |    2.2424     |    0.1497
+    7     | -1607.7673139698 |   6.2945e-04   |    2.2497     |    0.1525
+    8     | -1607.7674268458 |   4.7109e-05   |    2.2445     |    0.1553
+    9     | -1607.7674388535 |   9.4652e-06   |    2.2551     |    0.1553
+   10     | -1607.7674406020 |   5.3259e-07   |    2.2443     |    0.1554
+   11     | -1607.7674407667 |   2.1546e-07   |    2.2454     |    0.1554
+   12     | -1607.7674408183 |   3.4053e-08   |    2.2427     |    0.1552
+   13     | -1607.7674408371 |   9.2340e-09   |    2.2432     |    0.1553
+   14     | -1607.7674408406 |   1.8422e-09   |    2.2443     |    0.1555
+   15     | -1607.7674408414 |   5.5821e-10   |    2.2490     |    0.1554
+   16     | -1607.7674408416 |   1.3929e-10   |    2.2404     |    0.1553
+   17     | -1607.7674408416 |   2.8127e-11   |    2.2435     |    0.1552
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.76744084
+Nuclear Repulsion Energy: 4200.26088088
+Electronic Energy:        -5734.06955825
+XC Energy:                -73.958763
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.397s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1865900 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.68918284301
+E SS:  -2.22161058295
+E MP2: -8.91079342595
+Time:  26.342s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7674408416278311
+MP2 OS Energy: -3.9994624218333699
+MP2 SS Energy: -0.1268539642862587
+MP2 Total Energy: -4.1263163861196288
+MP2 Corrected Energy: -1611.8937572277475283
+=======================================================
+
+
+Topology 16 time: 84.421925 s, performance: SP: 0 FLOP/s, DP: 39.6 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_16.json
+************************************************************
+**************** Running topology 18 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2859225 / 14394436 significant shell pairs
+Created 1911042 / 9326916 significant shell pairs
+Total number of grid points: 645963 (10093 per atom)
+Total number of grid points: 647489 (10117 per atom)
+Total number of grid points: 646187 (10096 per atom)
+Total number of grid points: 646601 (10103 per atom)
+Octree generated 421 batches
+Octree generated 431 batches
+Octree generated 416 batches
+Octree generated 423 batches
+Creating 421 batches. Average size: 1308, max size: 2047
+Batching took 0.339558 seconds (31.84 MB)
+Creating 431 batches. Average size: 1274, max size: 2037
+Batching took 0.351497 seconds (32.74 MB)
+Creating 416 batches. Average size: 1322, max size: 2048
+Batching took 0.339328 seconds (31.52 MB)
+Creating 423 batches. Average size: 1301, max size: 2047
+Batching took 0.343884 seconds (32.01 MB)
+One electron integrals and orthogonalizer took 0.228533s
+Created 1911042 / 9326916 significant shell pairs
+3C integrals and B formation took 7.226799s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1622.6364174872 |   2.3511e+03   |   10.8518     |    0.1335
+    2     | -1606.9093350048 |   4.5601e+00   |    2.2664     |    0.1367
+    3     | -1607.5903218213 |   1.1545e+00   |    2.2623     |    0.1397
+    4     | -1607.7288529823 |   2.2624e-01   |    2.2643     |    0.1425
+    5     | -1607.7588383451 |   5.0822e-02   |    2.2625     |    0.1452
+    6     | -1607.7664269400 |   2.2830e-03   |    2.2669     |    0.1481
+    7     | -1607.7668026876 |   6.0570e-04   |    2.2640     |    0.1509
+    8     | -1607.7669094082 |   5.4026e-05   |    2.2619     |    0.1537
+    9     | -1607.7669222738 |   1.3411e-05   |    2.2633     |    0.1536
+   10     | -1607.7669247124 |   8.0849e-07   |    2.2669     |    0.1537
+   11     | -1607.7669249313 |   3.1538e-07   |    2.2658     |    0.1537
+   12     | -1607.7669250086 |   4.5199e-08   |    2.2672     |    0.1538
+   13     | -1607.7669250349 |   1.6275e-08   |    2.2664     |    0.1538
+   14     | -1607.7669250407 |   3.2231e-09   |    2.2757     |    0.1537
+   15     | -1607.7669250420 |   6.8111e-10   |    2.2663     |    0.1537
+   16     | -1607.7669250423 |   1.5743e-10   |    2.2695     |    0.1537
+   17     | -1607.7669250423 |   2.9161e-11   |    2.2760     |    0.1538
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.76692504
+Nuclear Repulsion Energy: 4257.33187113
+Electronic Energy:        -5791.13970452
+XC Energy:                -73.959092
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 57.957s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1911042 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69015965728
+E SS:  -2.22246378119
+E MP2: -8.91262343847
+Time:  26.597s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7669250423298308
+MP2 OS Energy: -4.0000464590881490
+MP2 SS Energy: -0.1269026819060864
+MP2 Total Energy: -4.1269491409942356
+MP2 Corrected Energy: -1611.8938741833239874
+=======================================================
+
+
+Topology 17 time: 85.255985 s, performance: SP: 0 FLOP/s, DP: 39.38 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_17.json
+************************************************************
+**************** Running topology 19 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2876075 / 14394436 significant shell pairs
+Created 1923098 / 9326916 significant shell pairs
+Total number of grid points: 646119 (10095 per atom)
+Total number of grid points: 647229 (10112 per atom)
+Total number of grid points: 646398 (10099 per atom)
+Octree generated 417 batches
+Total number of grid points: 646494 (10101 per atom)
+Octree generated 417 batches
+Octree generated 420 batches
+Octree generated 415 batches
+Creating 417 batches. Average size: 1321, max size: 2034
+Batching took 0.338655 seconds (31.74 MB)
+Creating 417 batches. Average size: 1317, max size: 2048
+Batching took 0.335013 seconds (31.72 MB)
+Creating 420 batches. Average size: 1311, max size: 2045
+Batching took 0.337926 seconds (31.92 MB)
+Creating 415 batches. Average size: 1327, max size: 2048
+Batching took 0.331536 seconds (31.66 MB)
+One electron integrals and orthogonalizer took 0.226615s
+Created 1923098 / 9326916 significant shell pairs
+3C integrals and B formation took 7.180935s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1622.7312109366 |   2.3515e+03   |   10.8619     |    0.1336
+    2     | -1606.8957519934 |   4.6113e+00   |    2.2778     |    0.1370
+    3     | -1607.5858430593 |   1.1488e+00   |    2.2797     |    0.1397
+    4     | -1607.7264814258 |   2.0284e-01   |    2.2846     |    0.1425
+    5     | -1607.7528746782 |   4.8129e-02   |    2.2781     |    0.1454
+    6     | -1607.7598537424 |   2.2949e-03   |    2.2818     |    0.1482
+    7     | -1607.7602197069 |   6.6131e-04   |    2.2803     |    0.1511
+    8     | -1607.7603366771 |   5.2978e-05   |    2.2773     |    0.1539
+    9     | -1607.7603500402 |   1.1457e-05   |    2.2804     |    0.1539
+   10     | -1607.7603521759 |   7.2160e-07   |    2.2765     |    0.1538
+   11     | -1607.7603523530 |   2.2223e-07   |    2.2782     |    0.1538
+   12     | -1607.7603524031 |   3.5590e-08   |    2.2815     |    0.1537
+   13     | -1607.7603524165 |   1.1273e-08   |    2.2780     |    0.1538
+   14     | -1607.7603524202 |   1.7423e-09   |    2.2794     |    0.1539
+   15     | -1607.7603524208 |   4.1806e-10   |    2.2808     |    0.1539
+   16     | -1607.7603524209 |   1.0798e-10   |    2.2843     |    0.1538
+   17     | -1607.7603524210 |   2.0508e-11   |    2.2790     |    0.1538
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.76035242
+Nuclear Repulsion Energy: 4277.50190186
+Electronic Energy:        -5811.30398447
+XC Energy:                -73.958270
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.162s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1923098 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.6930268269
+E SS:  -2.22356782241
+E MP2: -8.91659464931
+Time:  26.327s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7603524209505395
+MP2 OS Energy: -4.0017607398033697
+MP2 SS Energy: -0.1269657226598259
+MP2 Total Energy: -4.1287264624631952
+MP2 Corrected Energy: -1611.8890788834137311
+=======================================================
+
+
+Topology 18 time: 85.207402 s, performance: SP: 0 FLOP/s, DP: 39.46 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_18.json
+************************************************************
+**************** Running topology 20 of 20 *****************
+************************************************************
+
+************************************************************
+******** Beginning RI-REVDSD-PBEP86-D4(NOFC) energy ********
+************************************************************
+
+Created 2844942 / 14394436 significant shell pairs
+Created 1899443 / 9326916 significant shell pairs
+Total number of grid points: 646749 (10105 per atom)
+Total number of grid points: 646275 (10098 per atom)
+Octree generated 421 batches
+Total number of grid points: 646449 (10100 per atom)
+Octree generated 421 batches
+Total number of grid points: 646767 (10105 per atom)
+Octree generated 422 batches
+Octree generated 418 batches
+Creating 421 batches. Average size: 1306, max size: 2047
+Batching took 0.335005 seconds (31.66 MB)
+Creating 421 batches. Average size: 1310, max size: 2048
+Batching took 0.338921 seconds (31.56 MB)
+Creating 422 batches. Average size: 1303, max size: 2039
+Batching took 0.340376 seconds (31.74 MB)
+Creating 418 batches. Average size: 1312, max size: 2048
+Batching took 0.333304 seconds (31.37 MB)
+One electron integrals and orthogonalizer took 0.226793s
+Created 1899443 / 9326916 significant shell pairs
+3C integrals and B formation took 7.132974s
+Iteration |      Energy      |  DIIS Metric   | Fock Time (s) | DIIS Time (s)
+----------+------------------+----------------+---------------+--------------
+    1     | -1623.2728565103 |   2.3847e+03   |   10.8462     |    0.1352
+    2     | -1606.8893895524 |   4.4478e+00   |    2.3000     |    0.1385
+    3     | -1607.5633306456 |   1.1833e+00   |    2.2805     |    0.1414
+    4     | -1607.7006739768 |   2.5780e-01   |    2.2777     |    0.1444
+    5     | -1607.7340209346 |   5.5761e-02   |    2.2834     |    0.1469
+    6     | -1607.7424165216 |   3.3029e-03   |    2.2783     |    0.1498
+    7     | -1607.7429536008 |   7.3917e-04   |    2.2766     |    0.1526
+    8     | -1607.7430882580 |   5.4720e-05   |    2.2758     |    0.1554
+    9     | -1607.7431014532 |   1.2750e-05   |    2.2771     |    0.1554
+   10     | -1607.7431038020 |   8.8652e-07   |    2.2806     |    0.1555
+   11     | -1607.7431040495 |   2.6480e-07   |    2.2748     |    0.1554
+   12     | -1607.7431041255 |   4.9130e-08   |    2.2761     |    0.1555
+   13     | -1607.7431041533 |   1.7551e-08   |    2.2780     |    0.1555
+   14     | -1607.7431041598 |   2.3842e-09   |    2.2738     |    0.1554
+   15     | -1607.7431041610 |   4.8871e-10   |    2.2764     |    0.1554
+   16     | -1607.7431041612 |   1.9458e-10   |    2.2760     |    0.1554
+   17     | -1607.7431041613 |   3.2937e-11   |    2.2769     |    0.1554
+=======================================================
+         REVDSD-PBEP86-D4(NOFC) Energy Results         
+=======================================================
+E REVDSD-PBEP86-D4(NOFC): -1607.74310416
+Nuclear Repulsion Energy: 4250.54500088
+Electronic Energy:        -5784.33034182
+XC Energy:                -73.957763
+Converged:                1
+# of SCF iterations:      17
+SCF Time:                 58.109s
+************************************************************
+***************** Beginning RI-MP2 energy ******************
+************************************************************
+
+Created 1899443 / 9326916 significant shell pairs
+=======================================================
+                 RI-MP2 Energy Results                 
+=======================================================
+E OS:  -6.69798504514
+E SS:  -2.22662456603
+E MP2: -8.92460961117
+Time:  26.516s
+
+=======================================================
+            Individual Calculation Summary             
+=======================================================
+HF Energy: -1607.7431041613187972
+MP2 OS Energy: -4.0047252584898576
+MP2 SS Energy: -0.1271402627203829
+MP2 Total Energy: -4.1318655212102406
+MP2 Corrected Energy: -1611.8749696825291267
+=======================================================
+
+
+Topology 19 time: 85.329093 s, performance: SP: 0 FLOP/s, DP: 39.28 TFLOP/s
+JSON file written to: json_logs/global_u2_r_ryans_dhdft_inputs_exess_exess_inputs_isomers_12340-12359_topology_19.json
+Total flops: SP: 0 FLOPS, DP: 67.037246 PFLOPS
+Performance: SP: 0 FLOP/s, DP: 38.71 TFLOP/s
+
+Now, a word from our sponsors... 
+ Start with a great UX then work backwards to the product. (Steve Jobs)
+ Not sure if this applies to EXESS...
+
+[31mTotal processing time 1741.218029 seconds[0m
+Please cite the following papers for the methods used in this calculation:
+ - J.L. Galvez Vallejo et. al., Toward an extreme-scale electronic structure system, J. Chem. Phys., 2023. DOI: 10.1063/5.0156399
+
+ - R. Stocks, E. Palethorpe, and G.M.J. Barca, Multi-GPU RI-HF Energies and Analytic Gradients ─ Toward High-Throughput Ab Initio Molecular Dynamics, J. Chem. Theory Comput., 2024. DOI: 10.1021/acs.jctc.4c00877
+   For:
+     * RI-HF energy
+
+ - S. Lehtola, C. Steigemann, M.J.T. Oliveira, and M.A.L. Marques, Recent developments in Libxc: A comprehensive library of functionals for density functional theory, SoftwareX, 2018. DOI: 10.1016/j.softx.2017.11.002
+   For:
+     * LibXC version 6.2.0
+
+ - D.B. Williams-Young, W.A. de Jong, H.J.J. van Dam, and C. Yang, On the Efficient Evaluation of the Exchange Correlation Potential on Graphics Processing Unit Clusters, Frontiers in Chemistry, 2020. DOI: 10.3389/fchem.2020.581058
+   For:
+     * ExchCXX GPU implementation of exchange-correlation functionals
+
+ - R. Stocks, E. Palethorpe, and G.M.J. Barca, High-Performance Multi-GPU Analytic RI-MP2 Energy Gradients, J. Chem. Theory Comput., 2024. DOI: 10.1021/acs.jctc.3c01424
+   For:
+     * GPU accelerated RIMP2 Energy
+
+ - R. Stocks and G.M.J. Barca, Efficient Algorithms for GPU Accelerated Evaluation of the DFT Exchange-Correlation Functional, J. Chem. Theory Comput., 2025. DOI: 10.1021/acs.jctc.5c01229
+   For:
+     * GPU accelerated DFT exchange-correlation evaluation
+
+ - J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996) DOI: 10.1103/PhysRevLett.77.3865
+   For:
+     * gga_x_pbe XC Functional
+
+ - J. P. Perdew.,  Phys. Rev. B 33, 8822 (1986) DOI: 10.1103/PhysRevB.33.8822
+   For:
+     * gga_c_p86vwn XC Functional
+
