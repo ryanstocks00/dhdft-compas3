@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append(Path(__file__).parent.parent.as_posix())
 import common
 
-MAX_CONCURRENT = 20
+MAX_CONCURRENT = 30
 job_ids, jobid_pat = [], re.compile(r"(\d[\w\.\-]*)")
 
 for i, calc in enumerate(common.orca_calculations):
