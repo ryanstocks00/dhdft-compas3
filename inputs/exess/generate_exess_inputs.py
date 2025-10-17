@@ -33,10 +33,11 @@ for batch in common.exess_batches:
                 "use_ri": True,
                 "compress_ri_b": True,
             },
-            "log": {"console": {"level": "Verbose"}},
+            "log": {"console": {"level": "Info"}},
             "ks_dft": {
                 "functional": "revDSD-PBEP86-D4(noFC)",
                 "method": "BatchDense",
+                "use_C_opt": False,
                 "grid": {
                     "default_grid": "ULTRAFINE",
                     "octree": {"max_size": 2048},

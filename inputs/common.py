@@ -158,9 +158,10 @@ class EXESSCalculationBatch:
         return output_path / f"{self.name()}.out"
 
 
-selected_isomers = list(
-    filter(lambda x: x.carbons <= 32 or x.id < 40, all_graphene_isomers)
-)
+# selected_isomers = list(
+    # filter(lambda x: x.carbons <= 32 or x.id < 40, all_graphene_isomers)
+# )
+selected_isomers = list(all_graphene_isomers)
 
 exess_batches: list[EXESSCalculationBatch] = []
 
