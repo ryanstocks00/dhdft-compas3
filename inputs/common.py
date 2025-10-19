@@ -132,8 +132,8 @@ for isomer in all_graphene_isomers:
     if isomer.carbons == 24 and isomer.hydrogens == 14 or isomer.id == 1:
         for basis_name in basis_combos.keys():
             if (
-                isomer.carbons != 24
-                and isomer.hydrogens != 14
+                (isomer.carbons != 24
+                or isomer.hydrogens != 14)
                 and basis_name != "qz_riri"
             ):
                 continue

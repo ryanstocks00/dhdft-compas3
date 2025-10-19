@@ -60,12 +60,12 @@ end
 PS 0.5979
 PT 0.0571
 """
-            + """MaxCore 43860
+            + ("""MaxCore 45000
 Q1Opt 1
 """
             if nori
-            else ""
-            + """
+            else "")
+            + f"""
 end
 
 %pal

@@ -7,13 +7,19 @@ import common
 MAX_CONCURRENT = 30
 job_ids, jobid_pat = [], re.compile(r"(\d[\w\.\-]*)")
 
+idx = 0
 for i, calc in enumerate(common.orca_calculations):
+
+    if (calc.isomer.id != 1 and "nori" not in calc.basis_id):
+        continue
+
     inp, out = calc.input_filepath(), calc.output_filepath()
     dep = (
-        f"-W depend=afterany:{job_ids[i - MAX_CONCURRENT]}"
+        f"-W depend=afterany:{job_ids[idx - MAX_CONCURRENT]}"
         if i >= MAX_CONCURRENT
         else ""
     )
+    idx += 1
     cmd = [
         "qsub",
         "-v",
