@@ -6,6 +6,8 @@ sys.path.append(Path(__file__).parent.parent.as_posix())
 import common
 
 for batch in common.exess_batches:
+    # if batch.initial_index not in [7000, 7040]:
+        # continue
     input_file = batch.input_file_path()
     output_file = batch.output_file_path()
     output_folder = output_file.parent
