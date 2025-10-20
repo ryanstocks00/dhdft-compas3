@@ -10,13 +10,15 @@ job_ids, jobid_pat = [], re.compile(r"(\d[\w\.\-]*)")
 idx = 0
 for i, calc in enumerate(common.orca_calculations):
 
-    if (calc.isomer.id != 1 and "nori" not in calc.basis_id):
+    if calc.basis_id not in ["qz_nori", "qz_jkjk"]:
+        continue
+    if calc.basis_id in ["qz_nori"] and calc.isomer.id != 1:
         continue
 
     inp, out = calc.input_filepath(), calc.output_filepath()
     dep = (
         f"-W depend=afterany:{job_ids[idx - MAX_CONCURRENT]}"
-        if i >= MAX_CONCURRENT
+        if idx >= MAX_CONCURRENT
         else ""
     )
     idx += 1
@@ -29,7 +31,9 @@ for i, calc in enumerate(common.orca_calculations):
     if dep:
         cmd += dep.split()
 
-    if calc.isomer.carbons > 24 or (
+    if calc.basis_id == "qz_nori":
+        cmd.append("orca_pbs_superlong.sh")
+    elif calc.isomer.carbons > 24 or (
         calc.scf_aux_basis is None and calc.ri_aux_basis is None
     ):
         cmd.append("orca_pbs_long.sh")

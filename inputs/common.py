@@ -77,7 +77,7 @@ all_graphene_isomers = xtb_graphene_isomers + dft_graphene_isomers
 basis_combos = {
     "qz_rijk": ["def2-QZVPP", "def2/JK", "def2-QZVPP/C"],
     "qz_riri": ["def2-QZVPP", "def2-QZVPP/C", "def2-QZVPP/C"],
-    "qz_jkjk": ["def2-QZVPP", "def2/JK", "def2-QZVPP/JK"],
+    "qz_jkjk": ["def2-QZVPP", "def2/JK", "def2/JK"],
     "qz_ri": ["def2-QZVPP", "def2-QZVPP/C"],
     "qz_nori": ["def2-QZVPP"],
     "tz_rijk": ["def2-TZVP", "def2/JK", "def2-TZVP/C"],
