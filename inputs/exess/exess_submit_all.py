@@ -16,10 +16,8 @@ for batch in common.exess_pah335_batches:
     if machine == "perlmutter":
         submit_command = f"""sbatch --export=OUT_DIR={output_folder.resolve()},INPUT_FILENAME={input_file.resolve()},OUTPUT_FILENAME={output_file.name}  exess_submit_80.sh"""
     elif machine == "gadi_a100":
-        submit_command = f"""qsub -v=OUT_DIR={output_folder.resolve()},INPUT_FILENAME={input_file.resolve()},OUTPUT_FILENAME={output_file.name}  exess_submit_gadi_4_a100.sh"""
+        submit_command = f"""qsub -v OUT_DIR={output_folder.resolve()},INPUT_FILENAME={input_file.resolve()},OUTPUT_FILENAME={output_file.name}  exess_submit_gadi_4_a100.sh"""
     else:
         raise ValueError(f"Unknown machine {machine}")
     print(submit_command)
     os.system(submit_command)
-
-    break
