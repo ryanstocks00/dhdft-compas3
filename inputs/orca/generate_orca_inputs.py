@@ -32,7 +32,7 @@ for calc in common.orca_calculations:
         ri_text += f" RIJK"
     if scf_aux_basis is None and ri_aux_basis is None:
         nori = True
-        nprocs = 10
+        nprocs = 14
         ri_text += f" NORI"
     with open(input_path / calc.input_filepath(), "w") as f:
         f.write(

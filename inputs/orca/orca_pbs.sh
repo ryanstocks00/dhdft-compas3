@@ -17,6 +17,6 @@ rm "$INPUT_FILE".*
 
 cp "$INPUT_FOLDER"/"$INPUT_FILE".inp "$INPUT_FILE".inp
 
-$ORCA_PATH/orca "$INPUT_FILE".inp | tee "$OUTPUT_FILE"
+$ORCA_PATH/orca "$INPUT_FILE".inp 2>&1 | tee -p "$OUTPUT_FILE"
 
 rm "$INPUT_FILE.gbw" "$INPUT_FILE.densities" "$INPUT_FILE.bibtex" "$INPUT_FILE.densitiesinfo" "$INPUT_FILE".inp "$INPUT_FILE*.tmp*" "$INPUT_FILE".bas*

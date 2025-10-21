@@ -10,9 +10,7 @@ job_ids, jobid_pat = [], re.compile(r"(\d[\w\.\-]*)")
 idx = 0
 for i, calc in enumerate(common.orca_calculations):
 
-    if calc.basis_id not in ["qz_nori", "qz_jkjk"]:
-        continue
-    if calc.basis_id in ["qz_nori"] and calc.isomer.id != 1:
+    if calc.basis_id not in ["qz_nori"]:
         continue
 
     inp, out = calc.input_filepath(), calc.output_filepath()
