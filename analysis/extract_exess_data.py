@@ -54,7 +54,15 @@ def parse_qmmbe_json(path: Path, d4_energy) -> Dict[str, Any]:
         "b_formation_tflop/s": float(qmmbe.get("b_tflops")),
         "ri_fock_tflop/s": float(qmmbe.get("ri_tflops")),
         "xc_tflop/s": float(qmmbe.get("xc_tflops")),
+        "homo_hartree": (
+            float(qmmbe.get("homo")) if qmmbe.get("homo") is not None else None
+        ),
+        "lumo_hartree": (
+            float(qmmbe.get("lumo")) if qmmbe.get("lumo") is not None else None
+        ),
     }
+    if row["homo_hartree"] is not None:
+        row["hlg_hartree"] = row["lumo_hartree"] - row["homo_hartree"]
     return row
 
 
@@ -131,6 +139,9 @@ def main():
         "xc_energy_hartree",
         "nuc_repulsion_energy_hartree",
         "elec_energy_hartree",
+        "homo_hartree",
+        "lumo_hartree",
+        "hlg_hartree",
         "n_primary_basis_functions",
         "n_atoms",
         "n_carbons",

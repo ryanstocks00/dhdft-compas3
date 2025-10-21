@@ -5,13 +5,21 @@ import sys
 sys.path.append(Path(__file__).parent.parent.as_posix())
 import common
 
-for batch in common.exess_batches:
-    # if batch.initial_index not in [7000, 7040]:
-        # continue
+machine = "gadi_a100"
+
+# for batch in common.exess_batches:
+for batch in common.exess_pah335_batches:
     input_file = batch.input_file_path()
     output_file = batch.output_file_path()
     output_folder = output_file.parent
     print("Batch", batch.name(), "with", len(batch.isomers), "isomers")
-    sbatch_command = f"""sbatch --export=OUT_DIR={output_folder.resolve()},INPUT_FILENAME={input_file.resolve()},OUTPUT_FILENAME={output_file.name}  exess_submit_80.sh"""
-    print(sbatch_command)
-    os.system(sbatch_command)
+    if machine == "perlmutter":
+        submit_command = f"""sbatch --export=OUT_DIR={output_folder.resolve()},INPUT_FILENAME={input_file.resolve()},OUTPUT_FILENAME={output_file.name}  exess_submit_80.sh"""
+    elif machine == "gadi_a100":
+        submit_command = f"""qsub -v=OUT_DIR={output_folder.resolve()},INPUT_FILENAME={input_file.resolve()},OUTPUT_FILENAME={output_file.name}  exess_submit_gadi_4_a100.sh"""
+    else:
+        raise ValueError(f"Unknown machine {machine}")
+    print(submit_command)
+    os.system(submit_command)
+
+    break

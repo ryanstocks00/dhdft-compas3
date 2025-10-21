@@ -9,7 +9,9 @@ import common
 input_path = Path(__file__).parent / "exess_inputs"
 input_path.mkdir(parents=True, exist_ok=True)
 
-for batch in common.exess_batches:
+batch_set = "PAH335"
+
+for batch in common.exess_pah335_batches:
     print(
         f"Batch {batch.initial_index}-{batch.final_index}: {len(batch.isomers)} isomers"
     )

@@ -9,19 +9,54 @@ def get_all_xyzs(folder: Path) -> list[Path]:
 
 
 class GrapheneIsomer:
-    def __init__(self, xyz_path: Path, optimizer):
-        prefix = "compas3x_" if optimizer == "xTB" else "compas3D_"
+    def __init__(self, xyz_path: Path, optimizer, check_xyz: bool = False):
+        prefixes = {
+            "xTB": "compas3x_",
+            "DFT": "compas3D_",
+            "G4(MP2)": "PAH335_",
+        }
+        prefix = prefixes.get(optimizer, "")
         self.xyz_path = xyz_path
         self.name = prefix + xyz_path.stem
         self.optimizer = optimizer
 
-        m = re.match(r"compas3._hc_c(\d+)h(\d+)_0pent_(\d+)", self.name)
-        if m:
-            self.carbons = int(m.group(1))
-            self.hydrogens = int(m.group(2))
-            self.id = int(m.group(3))
-        else:
-            raise ValueError(f"Filename {self.name} does not match expected pattern.")
+        if optimizer in ["xTB", "DFT"]:
+            m = re.match(r"compas3._hc_c(\d+)h(\d+)_0pent_(\d+)", self.name)
+            if m:
+                self.carbons = int(m.group(1))
+                self.hydrogens = int(m.group(2))
+                self.id = int(m.group(3))
+            else:
+                raise ValueError(
+                    f"Filename {self.name} does not match expected pattern."
+                )
+        elif optimizer == "G4(MP2)":
+            m = re.match(r"PAH335_C(\d+)H(\d+)_pah(\d+)", self.name)
+            if m:
+                self.carbons = int(m.group(1))
+                self.hydrogens = int(m.group(2))
+                self.id = int(m.group(3))
+            else:
+                raise ValueError(
+                    f"Filename {self.name} does not match expected pattern."
+                )
+        if check_xyz:
+            with open(self.xyz_path, "r") as f:
+                lines = f.readlines()
+                num_atoms = int(lines[0].strip())
+                expected_num_atoms = self.carbons + self.hydrogens
+                if num_atoms != expected_num_atoms:
+                    raise ValueError(
+                        f"Number of atoms in {self.name} ({num_atoms}) does not match expected ({expected_num_atoms})."
+                    )
+                n_carbons = sum(1 for line in lines[2:] if line.strip().startswith("C"))
+                n_hydrogens = sum(
+                    1 for line in lines[2:] if line.strip().startswith("H")
+                )
+                if n_carbons != self.carbons or n_hydrogens != self.hydrogens:
+                    raise ValueError(
+                        f"Number of C/H atoms in {self.name} ({n_carbons} C, {n_hydrogens} H) does not match expected ({self.carbons} C, {self.hydrogens} H)."
+                    )
 
     def __repr__(self):
         return f"GrapheneIsomer(name={self.name}, carbons={self.carbons}, hydrogens={self.hydrogens}, id={self.id}, optimizer={self.optimizer})"
@@ -36,6 +71,9 @@ def get_all_graphene_isomers(optimizer: str) -> list[GrapheneIsomer]:
     elif optimizer == "DFT":
         folder = Path(__file__).parent / "compas3D-xyzs"
         tar_path = folder.parent / "compas-3D.tar.gz"
+    elif optimizer == "G4(MP2)":
+        folder = Path(__file__).parent / "PAH335_Structures"
+        tar_path = folder.parent / "PAH335_Structures.tar.gz"
     else:
         raise ValueError(f"Optimizer {optimizer} not recognized. Use 'xTB' or 'DFT'.")
 
@@ -68,6 +106,7 @@ def get_all_graphene_isomers(optimizer: str) -> list[GrapheneIsomer]:
     return graphenes
 
 
+g4mp2_pahs = get_all_graphene_isomers("G4(MP2)")
 xtb_graphene_isomers = get_all_graphene_isomers("xTB")
 dft_graphene_isomers = get_all_graphene_isomers("DFT")
 
@@ -132,26 +171,25 @@ for isomer in all_graphene_isomers:
     if isomer.carbons == 24 and isomer.hydrogens == 14 or isomer.id == 1:
         for basis_name in basis_combos.keys():
             if (
-                (isomer.carbons != 24
-                or isomer.hydrogens != 14)
-                and basis_name != "qz_riri"
-            ):
+                isomer.carbons != 24 or isomer.hydrogens != 14
+            ) and basis_name != "qz_riri":
                 continue
             orca_calculations.append(ORCACalculationToPerform(isomer, basis_name))
 
 
 class EXESSCalculationBatch:
-    def __init__(self, initial_index: int):
+    def __init__(self, initial_index: int, prefix: str = "isomers"):
         self.initial_index = initial_index
         self.final_index = initial_index - 1
         self.isomers: list[GrapheneIsomer] = []
+        self.prefix = prefix
 
     def add_isomer(self, isomer: GrapheneIsomer):
         self.isomers.append(isomer)
         self.final_index = self.initial_index + len(self.isomers) - 1
 
     def name(self) -> str:
-        return f"isomers_{self.initial_index}-{self.final_index}"
+        return f"{self.prefix}_{self.initial_index}-{self.final_index}"
 
     def input_file_path(self) -> Path:
         input_path = Path(__file__).parent / "exess" / "exess_inputs"
@@ -179,3 +217,12 @@ for i in range(0, len(selected_isomers), BATCH_SIZE):
     for isomer in batch:
         EXESS_batch.add_isomer(isomer)
     exess_batches.append(EXESS_batch)
+
+
+exess_pah335_batches = []
+for i in range(0, len(g4mp2_pahs), BATCH_SIZE):
+    batch = g4mp2_pahs[i : i + BATCH_SIZE]
+    EXESS_batch = EXESSCalculationBatch(initial_index=i, prefix="PAH335")
+    for isomer in batch:
+        EXESS_batch.add_isomer(isomer)
+    exess_pah335_batches.append(EXESS_batch)
