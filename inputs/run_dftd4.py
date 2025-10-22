@@ -23,7 +23,7 @@ def read_xyz(p: Path):
 
 
 rows = []
-for item in common.all_graphene_isomers:
+for item in common.all_structures:
     name, xyz = item.name, item.xyz_path
     syms, pos_ang = read_xyz(xyz)
     nums = np.array([Z[s] for s in syms], int)
@@ -42,8 +42,6 @@ for item in common.all_graphene_isomers:
     )
 
 with OUT.open("w", newline="") as f:
-    w = csv.DictWriter(
-        f, fieldnames=["system", "n_atoms", "d4_energy_hartree"]
-    )
+    w = csv.DictWriter(f, fieldnames=["system", "n_atoms", "d4_energy_hartree"])
     w.writeheader()
     w.writerows(rows)

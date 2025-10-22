@@ -110,7 +110,8 @@ g4mp2_pahs = get_all_graphene_isomers("G4(MP2)")
 xtb_graphene_isomers = get_all_graphene_isomers("xTB")
 dft_graphene_isomers = get_all_graphene_isomers("DFT")
 
-all_graphene_isomers = xtb_graphene_isomers + dft_graphene_isomers
+all_compas3_graphene_isomers = xtb_graphene_isomers + dft_graphene_isomers
+all_structures = all_compas3_graphene_isomers + g4mp2_pahs
 
 
 basis_combos = {
@@ -167,7 +168,7 @@ class ORCACalculationToPerform:
 
 orca_calculations: list[ORCACalculationToPerform] = []
 
-for isomer in all_graphene_isomers:
+for isomer in all_compas3_graphene_isomers:
     if isomer.carbons == 24 and isomer.hydrogens == 14 or isomer.id == 1:
         for basis_name in basis_combos.keys():
             if (
@@ -205,7 +206,7 @@ class EXESSCalculationBatch:
 # selected_isomers = list(
 # filter(lambda x: x.carbons <= 32 or x.id < 40, all_graphene_isomers)
 # )
-selected_isomers = list(all_graphene_isomers)
+selected_isomers = list(all_compas3_graphene_isomers)
 
 exess_batches: list[EXESSCalculationBatch] = []
 
