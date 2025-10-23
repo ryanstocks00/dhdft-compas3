@@ -88,7 +88,8 @@ def main():
         for r in reader:
             d4_energies[r["system"]] = float(r["d4_energy_hartree"])
 
-    for exess_batch in common.exess_pah335_batches:
+    # for exess_batch in common.exess_pah335_batches:
+    for exess_batch in common.exess_batches:
         batch_name = exess_batch.name()
 
         with open(exess_batch.input_file_path(), "r", encoding="utf-8") as f:
