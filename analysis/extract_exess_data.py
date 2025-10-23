@@ -124,6 +124,24 @@ def main():
                 extracted_data["id"] = exess_batch.isomers[idx].id
                 rows.append(extracted_data)
 
+    min_energy_by_ch: Dict[Tuple[int, int], float] = {}
+    for r in rows:
+        key = (r["n_carbons"], r["n_hydrogens"])
+        e = r.get("total_energy_hartree")
+        if e is None:
+            continue
+        if key not in min_energy_by_ch or e < min_energy_by_ch[key]:
+            min_energy_by_ch[key] = e
+
+    # Add isomerization energy = total_energy - group_min
+    for r in rows:
+        key = (r["n_carbons"], r["n_hydrogens"])
+        min_e = min_energy_by_ch.get(key)
+        total_e = r.get("total_energy_hartree")
+        r["isomerization_energy_hartree"] = (
+            (total_e - min_e) if (min_e is not None and total_e is not None) else None
+        )
+
     field_order = [
         "isomer_name",
         "optimizer",
@@ -132,6 +150,7 @@ def main():
         "id",
         "filename",
         "total_energy_hartree",
+        "isomerization_energy_hartree",
         "scf_energy_hartree",
         "pt2_os_correction_hartree",
         "pt2_ss_correction_hartree",

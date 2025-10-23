@@ -4,7 +4,8 @@ import argparse
 import csv
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
+import math
 
 import sys
 
@@ -62,7 +63,6 @@ def parse_property_file(path: Path) -> Dict[str, Dict[str, str]]:
             pos = line.rfind("]")
             tail = line[pos + 1 :] if pos != -1 else line[km.end() :]
 
-            # Prefer the first number in the tail; if none, use the first quoted string
             nm = NUMBER_FINDER.search(tail)
             if nm:
                 val = nm.group(1)
@@ -92,9 +92,10 @@ def extract_fields(sections: Dict[str, Dict[str, str]]) -> Dict[str, float]:
     # Meta info (kept as strings for the CSV)
     out_meta: Dict[str, str] = {}
     calc_status = sections.get("Calculation_Status", {})
-    out_meta["version"] = calc_status.get("VERSION", "")
-    out_meta["progname"] = calc_status.get("PROGNAME", "")
-    out_meta["status"] = calc_status.get("STATUS", "")
+
+    if calc_status.get("STATUS", "") != "NORMAL TERMINATION":
+        print("Not normal termination:", calc_status.get("STATUS", ""))
+        raise ValueError(f"Calculation {sections} did not terminate normally.")
 
     # SCF energy
     scf = sections.get("SCF_Energy", {})
@@ -128,16 +129,60 @@ def extract_fields(sections: Dict[str, Dict[str, str]]) -> Dict[str, float]:
         except Exception:
             return 0
 
-    out_meta["mult"] = str(to_int(info.get("MULT", "")))
+    out_meta["multiplicity"] = str(to_int(info.get("MULT", "")))
     out_meta["charge"] = str(to_int(info.get("CHARGE", "")))
-    out_meta["natoms"] = str(to_int(info.get("NUMOFATOMS", "")))
+    out_meta["num_atoms"] = str(to_int(info.get("NUMOFATOMS", "")))
 
     # Merge meta (as strings) into the dict we’ll later write
-    # We’ll keep numbers as floats and meta as strings; the CSV writer will handle it.
     combined: Dict[str, float | str] = {}
     combined.update(out_meta)
     combined.update(out)
     return combined  # type: ignore[return-value]
+
+
+# --- NEW: helpers to get (C,H) counts and compute group energies -----------------
+
+CH_PAT = re.compile(r"[Cc]\s*(\d+)\s*[Hh]\s*(\d+)")
+
+
+def infer_ch_counts(isomer_name: str, isomer_obj: Any) -> Tuple[int | None, int | None]:
+    """
+    Try to infer (num_carbons, num_hydrogens) from the isomer name like 'C6H6_benzene'
+    or from attributes on the isomer object (num_carbons/num_hydrogens).
+    Returns (None, None) if unavailable.
+    """
+    if isinstance(isomer_name, str):
+        m = CH_PAT.search(isomer_name)
+        if m:
+            try:
+                return int(m.group(1)), int(m.group(2))
+            except Exception:
+                pass
+
+    # Fallback to attributes if present
+    nC = getattr(isomer_obj, "num_carbons", None)
+    nH = getattr(isomer_obj, "num_hydrogens", None)
+    try:
+        nC = int(nC) if nC is not None else None
+    except Exception:
+        nC = None
+    try:
+        nH = int(nH) if nH is not None else None
+    except Exception:
+        nH = None
+
+    return nC, nH
+
+
+def safe_float(x: Any) -> float:
+    try:
+        val = float(x)
+        return val
+    except Exception:
+        return float("nan")
+
+
+# -------------------------------------------------------------------------------
 
 
 def main():
@@ -160,7 +205,7 @@ def main():
 
     for orca_calc in common.orca_calculations:
         fp = orca_calc.output_filepath().with_suffix(".property.txt")
-        if (not fp.exists() or not fp.is_file()):
+        if not fp.exists() or not fp.is_file():
             print(
                 f"Warning: Expected file {fp} for {orca_calc.input_filename} not found."
             )
@@ -170,24 +215,62 @@ def main():
         # Add filename (base) for traceability
         record = {"filename": fp.name, **record}
         record["isomer"] = orca_calc.isomer.name
+        record["basis_combo_id"] = orca_calc.basis_id
         record["primary_basis"] = orca_calc.primary_basis
         record["scf_aux_basis"] = orca_calc.scf_aux_basis or ""
         record["ri_aux_basis"] = orca_calc.ri_aux_basis or ""
+
+        # NEW: store group key (C,H) if we can infer it
+        nC, nH = infer_ch_counts(record["isomer"], orca_calc.isomer)
+        record["num_carbons"] = nC
+        record["num_hydrogens"] = nH
+
         rows.append(record)
+
+    # Second pass: compute per-(C,H) min and mean total energies
+    # Build grouping dict: key -> list of energies
+    groups = {}
+    for r in rows:
+        nC = r.get("num_carbons")
+        nH = r.get("num_hydrogens")
+        basis_combo = r.get("basis_combo_id")
+        E = safe_float(r.get("total_energy_hartree", float("nan")))
+        groups.setdefault((nC, nH, basis_combo), []).append(E)
+
+    group_min = {}
+    group_mean = {}
+    for key, vals in groups.items():
+        group_min[key] = min(vals)
+        group_mean[key] = sum(vals) / len(vals)
+
+    # Third pass: attach the two new columns per row
+    for r in rows:
+        nC = r.get("num_carbons")
+        nH = r.get("num_hydrogens")
+        basis_combo = r.get("basis_combo_id")
+        E = float(r.get("total_energy_hartree", float("nan")))
+        key = (nC, nH, basis_combo)
+        Emin = group_min.get(key)
+        Eavg = group_mean.get(key)
+        r["isomerization_energy_hartree"] = E - Emin
+        r["relative_energy_hartree"] = E - Eavg
 
     # Determine CSV field order (stable and readable)
     preferred_order = [
         "isomer",
+        "num_carbons",
+        "num_hydrogens",
+        "basis_combo_id",
         "primary_basis",
         "scf_aux_basis",
         "ri_aux_basis",
         "filename",
-        "version",
-        "progname",
-        "status",
-        "mult",
+        "multiplicity",
         "charge",
-        "natoms",
+        "num_atoms",
+        "total_energy_hartree",
+        "isomerization_energy_hartree",
+        "relative_energy_hartree",
         "scf_energy_hartree",
         "dft_eexchange_hartree",
         "dft_ecorr_hartree",
@@ -197,16 +280,10 @@ def main():
         "mp2_corr_hartree",
         "mp2_total_hartree",
         "vdw_correction_hartree",
-        "total_energy_hartree",
-    ]
-    # Include any extra keys that happened to appear (future-proofing)
-    all_keys = set().union(*(r.keys() for r in rows))
-    fieldnames = preferred_order + [
-        k for k in sorted(all_keys) if k not in preferred_order
     ]
 
     with open(args.output, "w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer = csv.DictWriter(fh, fieldnames=preferred_order)
         writer.writeheader()
         for r in rows:
             writer.writerow(r)

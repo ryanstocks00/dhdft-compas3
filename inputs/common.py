@@ -119,7 +119,7 @@ basis_combos = {
     "qz_riri": ["def2-QZVPP", "def2-QZVPP/C", "def2-QZVPP/C"],
     "qz_jkjk": ["def2-QZVPP", "def2/JK", "def2/JK"],
     "qz_ri": ["def2-QZVPP", "def2-QZVPP/C"],
-    "qz_nori": ["def2-QZVPP"],
+    # "qz_nori": ["def2-QZVPP"], # Too expensive, >24 hrs with ORCA
     "tz_rijk": ["def2-TZVP", "def2/JK", "def2-TZVP/C"],
     "tz_riri": ["def2-TZVP", "def2-TZVP/C", "def2-TZVP/C"],
     "tz_jkjk": ["def2-TZVP", "def2/JK", "def2/JK"],
