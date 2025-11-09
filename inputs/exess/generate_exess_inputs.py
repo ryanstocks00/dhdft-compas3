@@ -9,12 +9,14 @@ import common
 input_path = Path(__file__).parent / "exess_inputs"
 input_path.mkdir(parents=True, exist_ok=True)
 
-batch_set = "COMPAS-3"
+batch_set = "BOTH"
 
 if batch_set == "PAH335":
     batches = common.exess_pah335_batches
 elif batch_set == "COMPAS-3":
     batches = common.exess_batches
+elif batch_set == "BOTH":
+    batches = common.exess_pah335_batches + common.exess_batches
 else:
     raise ValueError(f"Unknown batch set: {batch_set}")
 
@@ -46,10 +48,11 @@ for batch in batches:
             "ks_dft": {
                 "functional": "revDSD-PBEP86-D4(noFC)",
                 "method": "BatchDense",
-                "use_C_opt": False,
+                "use_C_opt": True,
                 "grid": {
                     "default_grid": "ULTRAFINE",
-                    "octree": {"max_size": 2048},
+                    "pruning_scheme": "ROBUST",
+                    "octree": {"max_size": 2048, "combine_small_children": True},
                 },
                 "batches_per_batch": 30,
             },
