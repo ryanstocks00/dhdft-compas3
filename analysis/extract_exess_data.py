@@ -66,30 +66,9 @@ def parse_qmmbe_json(path: Path, d4_energy) -> Dict[str, Any]:
     return row
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Extract EXESS JSON data to CSV")
-    ap.add_argument(
-        "-o", "--output", default="exess_data.csv", help="Output CSV filename"
-    )
-    args = ap.parse_args()
-
-    exess_output_folder = Path(__file__).parent.parent / "outputs" / "exess"
-    jsons_folder = exess_output_folder / "json_logs"
-    json_files = sorted([p for p in jsons_folder.glob("*.json") if p.is_file()])
-
+def get_rows_for_batches(batches, json_files, d4_energies):
     rows: List[Dict[str, Any]] = []
-
-    d4_energies: Dict[str, float] = {}
-    dftd4_results_path = (
-        Path(__file__).parent.parent / "outputs" / "dftd4" / "dftd4_results.csv"
-    )
-    with open(dftd4_results_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            d4_energies[r["system"]] = float(r["d4_energy_hartree"])
-
-    # for exess_batch in common.exess_pah335_batches:
-    for exess_batch in common.exess_batches:
+    for exess_batch in batches:
         batch_name = exess_batch.name()
 
         with open(exess_batch.input_file_path(), "r", encoding="utf-8") as f:
@@ -142,6 +121,34 @@ def main():
         r["isomerization_energy_hartree"] = (
             (total_e - min_e) if (min_e is not None and total_e is not None) else None
         )
+
+    return rows
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Extract EXESS JSON data to CSV")
+    ap.add_argument(
+        "-o", "--output", default="exess_data.csv", help="Output CSV filename"
+    )
+    args = ap.parse_args()
+
+    exess_output_folder = Path(__file__).parent.parent / "outputs" / "exess"
+    jsons_folder = exess_output_folder / "json_logs"
+    json_files = sorted([p for p in jsons_folder.glob("*.json") if p.is_file()])
+
+    rows: List[Dict[str, Any]] = []
+
+    d4_energies: Dict[str, float] = {}
+    dftd4_results_path = (
+        Path(__file__).parent.parent / "outputs" / "dftd4" / "dftd4_results.csv"
+    )
+    with open(dftd4_results_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            d4_energies[r["system"]] = float(r["d4_energy_hartree"])
+
+    rows = get_rows_for_batches(common.exess_batches, json_files, d4_energies)
+    rows += get_rows_for_batches(common.exess_pah335_batches, json_files, d4_energies)
 
     field_order = [
         "isomer_name",

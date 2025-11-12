@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import subprocess
 
 
 def get_all_xyzs(folder: Path) -> list[Path]:
@@ -62,15 +63,38 @@ class GrapheneIsomer:
         return f"GrapheneIsomer(name={self.name}, carbons={self.carbons}, hydrogens={self.hydrogens}, id={self.id}, optimizer={self.optimizer})"
 
 
+def clone_compas_repo(gitlab_url="https://gitlab.com/porannegroup/compas.git", cache_dir=None):
+    """Clone the COMPAS-3 repository from GitLab to .compas_cache if it doesn't exist."""
+    if cache_dir is None:
+        cache_dir = Path(__file__).parent.parent / '.compas_cache'
+    else:
+        cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    repo_url = gitlab_url if gitlab_url.endswith('.git') else gitlab_url + '.git'
+    repo_dir = cache_dir / 'compas'
+    
+    if repo_dir.exists() and (repo_dir / '.git').exists():
+        subprocess.run(['git', 'pull'], cwd=repo_dir, check=False, capture_output=True)
+        return repo_dir
+    
+    subprocess.run(['git', 'clone', '--depth', '1', '--branch', 'main', repo_url, str(repo_dir)], check=True)
+    return repo_dir
+
+
 def get_all_graphene_isomers(optimizer: str) -> list[GrapheneIsomer]:
     """Get all GrapheneIsomer objects from .xyz files in a folder."""
 
     if optimizer == "xTB":
         folder = Path(__file__).parent / "compas3x-xyzs"
-        tar_path = folder.parent / "compas-3x.tar.gz"
+        # Ensure COMPAS repo is cloned before accessing tar.gz
+        clone_compas_repo()
+        tar_path = Path(__file__).parent.parent / ".compas_cache" / "compas" / "COMPAS-3" / "compas-3x.tar.gz"
     elif optimizer == "DFT":
         folder = Path(__file__).parent / "compas3D-xyzs"
-        tar_path = folder.parent / "compas-3D.tar.gz"
+        # Ensure COMPAS repo is cloned before accessing tar.gz
+        clone_compas_repo()
+        tar_path = Path(__file__).parent.parent / ".compas_cache" / "compas" / "COMPAS-3" / "compas-3D.tar.gz"
     elif optimizer == "G4(MP2)":
         folder = Path(__file__).parent / "PAH335_Structures"
         tar_path = folder.parent / "PAH335_Structures.tar.gz"
@@ -78,7 +102,7 @@ def get_all_graphene_isomers(optimizer: str) -> list[GrapheneIsomer]:
         raise ValueError(f"Optimizer {optimizer} not recognized. Use 'xTB' or 'DFT'.")
 
     if not folder.exists():
-        # try unzipping compas-3x.tar.gz from the parent directory
+        # try unzipping compas-3x.tar.gz from .compas_cache
         import tarfile
         import shutil
         import sys
