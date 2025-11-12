@@ -23,6 +23,7 @@ VALUE_FINDER = re.compile(rf"{NUM_RE}|{STR_RE}")
 
 # ----------------- property file parser -----------------
 
+
 def parse_property_file(path: Path) -> Dict[str, Dict[str, str]]:
     """
     Parse an ORCA .property.txt file into a dict:
@@ -76,11 +77,13 @@ def parse_property_file(path: Path) -> Dict[str, Dict[str, str]]:
 
     return sections
 
+
 def to_float(maybe_str: str) -> float:
     try:
         return float(maybe_str)
     except Exception:
         return float("nan")
+
 
 def extract_fields(sections: Dict[str, Dict[str, str]]) -> Dict[str, float]:
     """
@@ -141,9 +144,11 @@ def extract_fields(sections: Dict[str, Dict[str, str]]) -> Dict[str, float]:
     combined.update(out)
     return combined  # type: ignore[return-value]
 
+
 # --- helpers to get (C,H) counts and compute group energies -----------------
 
 CH_PAT = re.compile(r"[Cc]\s*(\d+)\s*[Hh]\s*(\d+)")
+
 
 def infer_ch_counts(isomer_name: str, isomer_obj: Any) -> Tuple[int | None, int | None]:
     """
@@ -173,15 +178,18 @@ def infer_ch_counts(isomer_name: str, isomer_obj: Any) -> Tuple[int | None, int 
 
     return nC, nH
 
+
 def safe_float(x: Any) -> float:
     try:
         return float(x)
     except Exception:
         return float("nan")
 
+
 # --- .out parsing: timings & iterations -----------------------------------
 
 RE_FLOAT_SEC = r"([0-9]+(?:\.[0-9]+)?)\s*sec"
+
 
 def _find_float_after(label_regex: str, lines: List[str]) -> float:
     rx = re.compile(label_regex, re.IGNORECASE)
@@ -193,6 +201,7 @@ def _find_float_after(label_regex: str, lines: List[str]) -> float:
             except Exception:
                 pass
     return float("nan")
+
 
 def _parse_total_run_time(text: str) -> float:
     """
@@ -214,11 +223,16 @@ def _parse_total_run_time(text: str) -> float:
         return days * 86400 + hours * 3600 + minutes * 60 + seconds + (msec / 1000.0)
 
     # Fallback: a single "Total time .... XX sec" (SCF block etc.)
-    m2 = re.search(r"^\s*Total time\s*\.*\s*([0-9.]+)\s*sec", text, flags=re.IGNORECASE | re.MULTILINE)
+    m2 = re.search(
+        r"^\s*Total time\s*\.*\s*([0-9.]+)\s*sec",
+        text,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
     if m2:
         return float(m2.group(1))
 
     return float("nan")
+
 
 def _parse_scf_iterations(text: str) -> int | None:
     m = re.search(r"SCF CONVERGED AFTER\s+(\d+)\s+CYCLES", text, flags=re.IGNORECASE)
@@ -228,6 +242,7 @@ def _parse_scf_iterations(text: str) -> int | None:
         except Exception:
             return None
     return None
+
 
 def parse_out_metrics(path: Path) -> Dict[str, float | int | None]:
     """
@@ -251,9 +266,13 @@ def parse_out_metrics(path: Path) -> Dict[str, float | int | None]:
     lines = txt.splitlines()
 
     # End-of-file module timings
-    startup_s = _find_float_after(r"Startup\s+calculation\s*\.*\s*" + RE_FLOAT_SEC, lines)
+    startup_s = _find_float_after(
+        r"Startup\s+calculation\s*\.*\s*" + RE_FLOAT_SEC, lines
+    )
     scf_iter_s = _find_float_after(r"SCF\s+iterations\s*\.*\s*" + RE_FLOAT_SEC, lines)
-    prop_s = _find_float_after(r"Property\s+calculations\s*\.*\s*" + RE_FLOAT_SEC, lines)
+    prop_s = _find_float_after(
+        r"Property\s+calculations\s*\.*\s*" + RE_FLOAT_SEC, lines
+    )
     mp2_s = _find_float_after(r"MP2\s+module\s*\.*\s*" + RE_FLOAT_SEC, lines)
 
     # SCF sub-timings (from Fock matrix formation breakdown)
@@ -274,7 +293,9 @@ def parse_out_metrics(path: Path) -> Dict[str, float | int | None]:
         "scf_iterations": scf_cycles,
     }
 
+
 # ----------------- main ----------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -297,7 +318,9 @@ def main():
     for orca_calc in common.orca_calculations:
         fp_prop = orca_calc.output_filepath().with_suffix(".property.txt")
         if not fp_prop.exists() or not fp_prop.is_file():
-            print(f"Warning: Expected file {fp_prop} for {orca_calc.input_filename} not found.")
+            print(
+                f"Warning: Expected file {fp_prop} for {orca_calc.input_filename} not found."
+            )
             continue
 
         sections = parse_property_file(fp_prop)
@@ -371,17 +394,7 @@ def main():
         "multiplicity",
         "charge",
         "num_atoms",
-        # NEW
         "num_basis_functions",
-        # timings / iterations
-        "scf_iterations",
-        "startup_time_s",
-        "scf_time_s",
-        "property_time_s",
-        "rij_k_time_s",
-        "xc_integration_time_s",
-        "mp2_time_s",
-        "total_time_s",
         # energies
         "total_energy_hartree",
         "isomerization_energy_hartree",
@@ -395,6 +408,15 @@ def main():
         "mp2_corr_hartree",
         "mp2_total_hartree",
         "vdw_correction_hartree",
+        # timings / iterations
+        "scf_iterations",
+        "startup_time_s",
+        "scf_time_s",
+        "property_time_s",
+        "rij_k_time_s",
+        "xc_integration_time_s",
+        "mp2_time_s",
+        "total_time_s",
     ]
 
     with open(args.output, "w", newline="", encoding="utf-8") as fh:
@@ -404,6 +426,7 @@ def main():
             writer.writerow(r)
 
     print(f"Wrote {len(rows)} rows to {args.output}")
+
 
 if __name__ == "__main__":
     main()
