@@ -95,3 +95,4 @@ def create_scatter_plot(x, y, xlabel, ylabel, output_path):
     print(f"Saved: {output_path}")
     plt.close()
 
+

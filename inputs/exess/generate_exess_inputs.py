@@ -9,10 +9,10 @@ import common
 input_path = Path(__file__).parent / "exess_inputs"
 input_path.mkdir(parents=True, exist_ok=True)
 
-batch_set = "BOTH"
+batch_set = "PAH335"
 
 if batch_set == "PAH335":
-    batches = common.exess_pah335_batches
+    batches = common.exess_pah335_batches + common.exess_pah335_pbe_batches
 elif batch_set == "COMPAS-3":
     batches = common.exess_batches
 elif batch_set == "BOTH":
@@ -29,8 +29,8 @@ for batch in batches:
         "driver": "Energy",
         "model": {
             "method": "RestrictedKSDFT",
-            "basis": "def2-QZVPP",
-            "aux_basis": "def2-QZVPP-RIFIT",
+            "basis": batch.basis,
+            "aux_basis": batch.aux_basis,
             "force_cartesian_basis_sets": False,
             "standard_orientation": "None",
         },
@@ -46,7 +46,7 @@ for batch in batches:
             },
             "log": {"console": {"level": "Info"}},
             "ks_dft": {
-                "functional": "revDSD-PBEP86-D4(noFC)",
+                "functional": batch.functional_name,
                 "method": "BatchDense",
                 "use_C_opt": True,
                 "grid": {

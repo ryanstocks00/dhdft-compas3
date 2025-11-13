@@ -66,9 +66,65 @@ def parse_qmmbe_json(path: Path, d4_energy) -> Dict[str, Any]:
     return row
 
 
-def get_rows_for_batches(batches, json_files, d4_energies):
+def main():
+    ap = argparse.ArgumentParser(description="Extract EXESS JSON data to CSV")
+    ap.add_argument(
+        "-o", "--output", default="exess_data.csv", help="Output CSV filename"
+    )
+    args = ap.parse_args()
+
+    exess_output_folder = Path(__file__).parent.parent / "outputs" / "exess"
+    jsons_folder = exess_output_folder / "json_logs"
+    json_files = sorted([p for p in jsons_folder.glob("*.json") if p.is_file()])
+
     rows: List[Dict[str, Any]] = []
-    for exess_batch in batches:
+
+    d4_energies: Dict[str, float] = {}
+    dftd4_results_path = (
+        Path(__file__).parent.parent / "outputs" / "dftd4" / "dftd4_results.csv"
+    )
+    with open(dftd4_results_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            d4_energies[r["system"]] = float(r["d4_energy_hartree"])
+
+    for exess_batch in common.exess_pah335_batches:
+        batch_name = exess_batch.name()
+
+        with open(exess_batch.input_file_path(), "r", encoding="utf-8") as f:
+            input_json = json.load(f)
+        for idx in range(len(exess_batch.isomers)):
+            json_re = rf".*exess_inputs_{batch_name}_topology_{idx}.json$"
+            matched = [p for p in json_files if re.match(json_re, p.name)]
+            if len(matched) == 0:
+                print(
+                    f"Warning: No JSON file found for {batch_name} topology {idx} (isomer {exess_batch.isomers[idx].name})"
+                )
+            elif len(matched) > 1:
+                print(
+                    f"Warning: Multiple JSON files found for {batch_name} topology {idx}: {matched}"
+                )
+            elif (
+                input_json.get("topologies")[idx]["xyz"]
+                != exess_batch.isomers[idx].xyz_path.as_posix()
+            ):
+                print(
+                    f"Warning: Mismatch in input XYZ for {batch_name} topology {idx}: {input_json.get('topologies')[idx]['xyz']} vs {exess_batch.isomers[idx].xyz_path.as_posix()}"
+                )
+                exit(1)
+            else:
+                d4_energy = d4_energies.get(exess_batch.isomers[idx].name)
+                extracted_data = parse_qmmbe_json(matched[0], d4_energy)
+                extracted_data["topology_index"] = idx
+                extracted_data["batch_name"] = batch_name
+                extracted_data["isomer_name"] = exess_batch.isomers[idx].name
+                extracted_data["optimizer"] = exess_batch.isomers[idx].optimizer
+                extracted_data["n_carbons"] = exess_batch.isomers[idx].carbons
+                extracted_data["n_hydrogens"] = exess_batch.isomers[idx].hydrogens
+                extracted_data["id"] = exess_batch.isomers[idx].id
+                rows.append(extracted_data)
+    
+    for exess_batch in common.exess_batches:
         batch_name = exess_batch.name()
 
         with open(exess_batch.input_file_path(), "r", encoding="utf-8") as f:
@@ -121,34 +177,6 @@ def get_rows_for_batches(batches, json_files, d4_energies):
         r["isomerization_energy_hartree"] = (
             (total_e - min_e) if (min_e is not None and total_e is not None) else None
         )
-
-    return rows
-
-
-def main():
-    ap = argparse.ArgumentParser(description="Extract EXESS JSON data to CSV")
-    ap.add_argument(
-        "-o", "--output", default="exess_data.csv", help="Output CSV filename"
-    )
-    args = ap.parse_args()
-
-    exess_output_folder = Path(__file__).parent.parent / "outputs" / "exess"
-    jsons_folder = exess_output_folder / "json_logs"
-    json_files = sorted([p for p in jsons_folder.glob("*.json") if p.is_file()])
-
-    rows: List[Dict[str, Any]] = []
-
-    d4_energies: Dict[str, float] = {}
-    dftd4_results_path = (
-        Path(__file__).parent.parent / "outputs" / "dftd4" / "dftd4_results.csv"
-    )
-    with open(dftd4_results_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            d4_energies[r["system"]] = float(r["d4_energy_hartree"])
-
-    rows = get_rows_for_batches(common.exess_batches, json_files, d4_energies)
-    rows += get_rows_for_batches(common.exess_pah335_batches, json_files, d4_energies)
 
     field_order = [
         "isomer_name",
