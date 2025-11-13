@@ -321,5 +321,5 @@ for i in range(0, len(g4mp2_pahs), BATCH_SIZE):
     for isomer in batch:
         EXESS_batch_pbe_qz.add_isomer(isomer)
         EXESS_batch_pbe_tz.add_isomer(isomer)
-    exess_pah335_batches.append(EXESS_batch_pbe_qz)
-    exess_pah335_batches.append(EXESS_batch_pbe_tz)
+    exess_pah335_pbe_batches.append(EXESS_batch_pbe_qz)
+    exess_pah335_pbe_batches.append(EXESS_batch_pbe_tz)

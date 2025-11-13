@@ -9,7 +9,8 @@ machine = "perlmutter"
 
 # for batch in common.exess_batches:
 # for batch in common.exess_pah335_batches:
-for batch in common.exess_batches + common.exess_pah335_batches:
+# for batch in common.exess_batches + common.exess_pah335_batches:
+for batch in common.exess_pah335_pbe_batches:
     input_file = batch.input_file_path()
     output_file = batch.output_file_path()
     output_folder = output_file.parent
