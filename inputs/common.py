@@ -209,13 +209,25 @@ class ORCACalculationToPerform:
 
 orca_calculations: list[ORCACalculationToPerform] = []
 
+# Load isomers from size_profiling.json
+size_profiling_path = Path(__file__).parent.parent / "inputs" / "size_profiling.json"
+size_profiling_isomer_names = set()
+if size_profiling_path.exists():
+    import json
+    with open(size_profiling_path, 'r') as f:
+        size_profiling_data = json.load(f)
+    for topo in size_profiling_data.get("topologies", []):
+        xyz_path = Path(topo["xyz"])
+        # Extract name like 'hc_c16h10_0pent_1' from path
+        isomer_name = xyz_path.stem
+        size_profiling_isomer_names.add(isomer_name)
+
+# Create ORCA calculations for all isomers in size_profiling.json
 for isomer in all_compas3_graphene_isomers:
-    if isomer.carbons == 24 and isomer.hydrogens == 14 or isomer.id == 1:
+    # Match by xyz_path stem (without prefix)
+    isomer_base_name = isomer.xyz_path.stem
+    if isomer_base_name in size_profiling_isomer_names:
         for basis_name in basis_combos.keys():
-            if (
-                isomer.carbons != 24 or isomer.hydrogens != 14
-            ) and basis_name != "qz_riri":
-                continue
             orca_calculations.append(ORCACalculationToPerform(isomer, basis_name))
 
 
