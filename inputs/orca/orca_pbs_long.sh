@@ -10,13 +10,25 @@
 
 module load orca/6.0.1
 
-mkdir -p "$OUTPUT_FOLDER"
-pushd "$OUTPUT_FOLDER" || exit
+# Set up working directory on job filesystem for better performance
+WORK_DIR="$PBS_JOBFS"
+mkdir -p "$WORK_DIR"
+cd "$WORK_DIR" || exit
 
-rm "$INPUT_FILE".*
-
+# Copy input file to jobfs
 cp "$INPUT_FOLDER"/"$INPUT_FILE".inp "$INPUT_FILE".inp
 
-$ORCA_PATH/orca "$INPUT_FILE".inp 2>&1 | tee -p "$OUTPUT_FILE"
+# Run ORCA in jobfs
+$ORCA_PATH/orca "$INPUT_FILE".inp 2>&1 | tee -p "$INPUT_FILE".out
 
-rm "$INPUT_FILE.gbw" "$INPUT_FILE.densities" "$INPUT_FILE.bibtex" "$INPUT_FILE.densitiesinfo" "$INPUT_FILE".inp "$INPUT_FILE*.tmp*" "$INPUT_FILE".bas*
+# Copy important output files back to gdata output folder
+mkdir -p "$OUTPUT_FOLDER"
+cp "$INPUT_FILE".out "$OUTPUT_FOLDER"/"$OUTPUT_FILE"
+
+# Copy property files if they exist
+if [ -f "$INPUT_FILE".property.txt ]; then
+    cp "$INPUT_FILE".property.txt "$OUTPUT_FOLDER"/
+fi
+
+# Clean up jobfs
+rm -f "$INPUT_FILE".*
