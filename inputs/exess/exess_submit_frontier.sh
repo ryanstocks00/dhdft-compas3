@@ -15,6 +15,7 @@ source ${EXESS_PATH}/tools/frontier_env_setup_6.3.sh
 # Get node and task IDs
 NODE_ID=${SLURM_NODEID:-0}
 LOCAL_TASK_ID=${SLURM_LOCALID:-0}
+CURRENT_NODE=${SLURMD_NODENAME:-$(hostname -s)}
 
 # If BATCH_LIST_FILE is provided, use it to distribute batches across nodes
 # Otherwise, use the single batch mode with INPUT_FILENAME and OUTPUT_FILENAME
@@ -53,14 +54,15 @@ if [ "$LOCAL_TASK_ID" -eq 0 ]; then
 fi
 
 # Use srun to properly allocate GPUs - all 9 tasks on this node participate
+# --nodelist=$CURRENT_NODE constrains srun to only use the current node (not all 256 nodes)
 # --ntasks=9 uses all 9 tasks on this node (to utilize all 8 GPUs)
 # --ntasks-per-node=9 ensures we use all tasks on the current node
 # --exclusive ensures this task gets exclusive access to the node's resources
 # All tasks call srun, and srun coordinates to run exess using all 9 tasks
 if [ "$LOCAL_TASK_ID" -eq 0 ]; then
-    srun --ntasks=9 --ntasks-per-node=9 --exclusive --export=ALL $EXESS_PATH/build/exess "$INPUT_FILENAME" 2>&1 | tee "$OUTPUT_FILENAME"
+    srun --nodelist=$CURRENT_NODE --ntasks=9 --ntasks-per-node=9 --exclusive --export=ALL $EXESS_PATH/build/exess "$INPUT_FILENAME" 2>&1 | tee "$OUTPUT_FILENAME"
     popd || exit
 else
     # Tasks 1-8 also call srun - srun will coordinate and use all 9 tasks
-    srun --ntasks=9 --ntasks-per-node=9 --exclusive --export=ALL $EXESS_PATH/build/exess "$INPUT_FILENAME" > /dev/null 2>&1
+    srun --nodelist=$CURRENT_NODE --ntasks=9 --ntasks-per-node=9 --exclusive --export=ALL $EXESS_PATH/build/exess "$INPUT_FILENAME" > /dev/null 2>&1
 fi
