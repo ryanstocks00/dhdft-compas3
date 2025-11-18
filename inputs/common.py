@@ -214,7 +214,8 @@ size_profiling_path = Path(__file__).parent.parent / "inputs" / "size_profiling.
 size_profiling_isomer_names = set()
 if size_profiling_path.exists():
     import json
-    with open(size_profiling_path, 'r') as f:
+
+    with open(size_profiling_path, "r") as f:
         size_profiling_data = json.load(f)
     for topo in size_profiling_data.get("topologies", []):
         xyz_path = Path(topo["xyz"])
@@ -246,6 +247,7 @@ def basis_to_aux_basis(basis: str) -> str:
 functional_to_name = {
     "revDSD-PBEP86-D4": "revDSD-PBEP86-D4(noFC)",
     "PBE0": "PBE0",
+    "SVWN5": "SVWN5",
 }
 
 
@@ -312,6 +314,15 @@ for i in range(0, len(selected_isomers), BATCH_SIZE):
         EXESS_batch.add_isomer(isomer)
     exess_batches.append(EXESS_batch)
 
+exess_svwn_batches: list[EXESSCalculationBatch] = []
+for i in range(0, len(xtb_graphene_isomers), BATCH_SIZE):
+    batch = xtb_graphene_isomers[i : i + BATCH_SIZE]
+    EXESS_batch = EXESSCalculationBatch(
+        initial_index=i, basis="def2-TZVP", functional="SVWN5"
+    )
+    for isomer in batch:
+        EXESS_batch.add_isomer(isomer)
+    exess_svwn_batches.append(EXESS_batch)
 
 exess_pah335_batches = []
 for i in range(0, len(g4mp2_pahs), BATCH_SIZE):
