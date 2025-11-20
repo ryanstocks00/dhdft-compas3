@@ -13,7 +13,8 @@ max_batches = 256  # Maximum number of batches to submit in multi-node mode
 # for batch in common.exess_pah335_batches:
 # for batch in common.exess_batches + common.exess_pah335_batches:
 # for batch in common.exess_pah335_pbe_batches:
-batches = list(common.exess_svwn_batches)
+# batches = list(common.exess_svwn_batches)
+batches = list(common.exess_gga_batches)
 
 if machine == "frontier" and use_multi_node:
     # Multi-node mode: split batches into chunks of 256 and submit separate jobs

@@ -9,7 +9,7 @@ import common
 input_path = Path(__file__).parent / "exess_inputs"
 input_path.mkdir(parents=True, exist_ok=True)
 
-batch_set = "PAH335"
+batch_set = "BENCHMARKING"
 
 if batch_set == "PAH335":
     batches = common.exess_pah335_batches + common.exess_pah335_pbe_batches
@@ -17,6 +17,9 @@ elif batch_set == "COMPAS-3":
     batches = common.exess_batches
 elif batch_set == "BOTH":
     batches = common.exess_pah335_batches + common.exess_batches
+elif batch_set == "BENCHMARKING":
+    # batches = common.exess_svwn_batches
+    batches = common.exess_gga_batches
 else:
     raise ValueError(f"Unknown batch set: {batch_set}")
 
@@ -35,7 +38,7 @@ for batch in batches:
             "standard_orientation": "None",
         },
         "system": {
-            "max_gpu_memory_mb": 54000,
+            "max_gpu_memory_mb": 40000,
         },
         "keywords": {
             "scf": {
@@ -47,7 +50,7 @@ for batch in batches:
             "log": {"console": {"level": "Info"}},
             "ks_dft": {
                 "functional": batch.functional_name,
-                "method": "BatchDense",
+                "method": "GauXC",
                 "use_C_opt": True,
                 "grid": {
                     "default_grid": "ULTRAFINE",

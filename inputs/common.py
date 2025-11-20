@@ -248,6 +248,13 @@ functional_to_name = {
     "revDSD-PBEP86-D4": "revDSD-PBEP86-D4(noFC)",
     "PBE0": "PBE0",
     "SVWN5": "SVWN5",
+    "PBE": "PBE",
+    "BLYP": "BLYP",
+    "revPBE": "GGA_X_PBE_R+GGA_C_PBE",
+    "BP86": "GGA_X_B88+GGA_C_P86",
+    "BPW91": "GGA_X_B88+GGA_C_W91",
+    "B97-D": "GGA_XC_B97_D",
+    "HCTH407": "GGA_XC_HCTH_407",
 }
 
 
@@ -323,6 +330,17 @@ for i in range(0, len(xtb_graphene_isomers), BATCH_SIZE):
     for isomer in batch:
         EXESS_batch.add_isomer(isomer)
     exess_svwn_batches.append(EXESS_batch)
+
+exess_gga_batches: list[EXESSCalculationBatch] = []
+for gga in ["PBE", "BLYP", "revPBE", "BP86", "BPW91", "B97-D", "HCTH407"]:
+    for i in range(0, len(xtb_graphene_isomers), BATCH_SIZE):
+        batch = xtb_graphene_isomers[i : i + BATCH_SIZE]
+        EXESS_batch = EXESSCalculationBatch(
+            initial_index=i, basis="def2-TZVP", functional=gga
+        )
+        for isomer in batch:
+            EXESS_batch.add_isomer(isomer)
+        exess_gga_batches.append(EXESS_batch)
 
 exess_pah335_batches = []
 for i in range(0, len(g4mp2_pahs), BATCH_SIZE):
