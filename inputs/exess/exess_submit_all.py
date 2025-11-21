@@ -7,10 +7,19 @@ import common
 
 machine = "perlmutter"
 
+<<<<<<< Updated upstream
 # for batch in common.exess_batches:
 # for batch in common.exess_pah335_batches:
 # for batch in common.exess_batches + common.exess_pah335_batches:
 for batch in common.exess_pah335_pbe_batches:
+=======
+count = 60
+
+for batch in common.exess_batches:
+# for batch in common.exess_pah335_batches:
+    if (batch.initial_index < 38310):
+        continue
+>>>>>>> Stashed changes
     input_file = batch.input_file_path()
     output_file = batch.output_file_path()
     output_folder = output_file.parent
@@ -23,3 +32,6 @@ for batch in common.exess_pah335_pbe_batches:
         raise ValueError(f"Unknown machine {machine}")
     print(submit_command)
     os.system(submit_command)
+    count -= 1
+    if count <= 0:
+        break
