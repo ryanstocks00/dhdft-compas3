@@ -252,9 +252,19 @@ functional_to_name = {
     "BLYP": "BLYP",
     "revPBE": "GGA_X_PBE_R+GGA_C_PBE",
     "BP86": "GGA_X_B88+GGA_C_P86",
-    "BPW91": "GGA_X_B88+GGA_C_W91",
+    "BPW91": "GGA_X_B88+GGA_C_PW91",
     "B97-D": "GGA_XC_B97_D",
     "HCTH407": "GGA_XC_HCTH_407",
+    "TPSS": "MGGA_C_TPSS+MGGA_X_TPSS",
+    "B97M-V": "MGGA_XC_B97M_V",
+    "MN15L": "MGGA_X_MN15_L+MGGA_C_MN15_L",
+    "SCAN": "MGGA_X_SCAN+MGGA_C_SCAN",
+    "rSCAN": "MGGA_X_RSCAN+MGGA_C_RSCAN",
+    "r2SCAN": "MGGA_X_R2SCAN+MGGA_C_R2SCAN",
+    "revTPSS": "MGGA_X_REVTPSS+MGGA_C_REVTPSS",
+    "t-HCTH": "MGGA_X_TAU_HCTH+MGGA_C_TAU_HCTH",
+    "M06-L": "MGGA_X_M06_L+MGGA_C_M06_L",
+    "M11-L": "MGGA_X_M11_L+MGGA_C_M11_L",
 }
 
 
@@ -364,3 +374,14 @@ for i in range(0, len(g4mp2_pahs), BATCH_SIZE):
         EXESS_batch_pbe_tz.add_isomer(isomer)
     exess_pah335_pbe_batches.append(EXESS_batch_pbe_qz)
     exess_pah335_pbe_batches.append(EXESS_batch_pbe_tz)
+
+exess_mgga_batches: list[EXESSCalculationBatch] = []
+for mgga in ["TPSS", "B97M-V", "MN15L", "SCAN", "rSCAN", "r2SCAN", "revTPSS", "t-HCTH", "M06-L", "M11-L"]:
+    for i in range(0, len(xtb_graphene_isomers), BATCH_SIZE):
+        batch = xtb_graphene_isomers[i : i + BATCH_SIZE]
+        EXESS_batch = EXESSCalculationBatch(
+            initial_index=i, basis="def2-TZVP", functional=mgga
+        )
+        for isomer in batch:
+            EXESS_batch.add_isomer(isomer)
+        exess_mgga_batches.append(EXESS_batch)
