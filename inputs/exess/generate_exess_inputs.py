@@ -1,3 +1,4 @@
+    print(json_re0
 import sys
 from pathlib import Path
 import json
@@ -16,7 +17,7 @@ if batch_set == "PAH335":
 elif batch_set == "COMPAS-3":
     batches = common.exess_batches
 elif batch_set == "BOTH":
-    batches = common.exess_pah335_batches + common.exess_batches
+    batches = common.exess_pah335_batches + common.exess_batches + common.exess_pah335_pbe_batches
 elif batch_set == "BENCHMARKING":
     # batches = common.exess_svwn_batches
     batches = common.exess_gga_batches
