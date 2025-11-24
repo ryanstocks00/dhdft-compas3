@@ -4,13 +4,13 @@ from pathlib import Path
 sys.path.append(Path(__file__).parent.parent.as_posix())
 import common
 
-MAX_CONCURRENT = 30
+MAX_CONCURRENT = 5
 job_ids, jobid_pat = [], re.compile(r"(\d[\w\.\-]*)")
 
 idx = 0
 for i, calc in enumerate(common.orca_calculations):
 
-    if calc.basis_id not in ["qz_nori"]:
+    if calc.basis_id not in ["qz_riri"]:
         continue
 
     inp, out = calc.input_filepath(), calc.output_filepath()

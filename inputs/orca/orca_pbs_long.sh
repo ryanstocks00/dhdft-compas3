@@ -6,7 +6,7 @@
 #PBS -l jobfs=400GB
 #PBS -l software=orca
 #PBS -l ncpus=104
-#PBS -l storage=scratch/kx58
+#PBS -l storage=gdata/kx58
 
 module load orca/6.0.1
 
