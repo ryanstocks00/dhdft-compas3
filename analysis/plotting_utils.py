@@ -22,6 +22,14 @@ HARTREE_TO_KJ_PER_MOL = 2625.5
 SINGLE_COLUMN_WIDTH = 3.5
 
 
+def format_functional_name(functional):
+    """Format functional name for display in plots (e.g., r2SCAN -> r²SCAN)."""
+    # Replace r2SCAN with superscript 2
+    if functional == 'r2SCAN':
+        return r'r$^2$SCAN'
+    return functional
+
+
 def extract_common_id(name):
     """Extract common identifier from isomer name."""
     if not isinstance(name, str):
@@ -53,8 +61,17 @@ def format_axis_offsets(ax):
                    horizontalalignment=ha, verticalalignment=va, fontsize=8, color=offset.get_color())
 
 
-def create_scatter_plot(x, y, xlabel, ylabel, output_path):
-    """Create a standardized scatter plot with statistics."""
+def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None):
+    """Create a standardized scatter plot with statistics.
+    
+    Args:
+        x: x-axis data
+        y: y-axis data
+        xlabel: x-axis label
+        ylabel: y-axis label
+        output_path: path to save the plot
+        mad_kjmol: Mean Absolute Deviation in kJ/mol (optional, will be calculated if not provided)
+    """
     from pathlib import Path
     
     fig, ax = plt.subplots(figsize=(SINGLE_COLUMN_WIDTH, SINGLE_COLUMN_WIDTH))
@@ -69,8 +86,11 @@ def create_scatter_plot(x, y, xlabel, ylabel, output_path):
         ax.plot(trendline_x, slope * trendline_x + intercept, 'black', alpha=0.8, linewidth=0.9,
                linestyle='-', label='Linear fit', zorder=10)
     
-    r_squared, rmsd, mad = calculate_stats(x, y)
-    summary_text = f'$R^2$ = {r_squared:.3f}\nRMSD = {rmsd:.2f} kJ/mol\nMAD = {mad:.2f}%'
+    r_squared, rmsd, mad_percentage = calculate_stats(x, y)
+    if mad_kjmol is None:
+        mad_kjmol = np.mean(np.abs(x - y))
+    
+    summary_text = f'$R^2$ = {r_squared:.3f}\nRMSD = {rmsd:.2f} kJ/mol\nMAD = {mad_kjmol:.2f} kJ/mol\nMAD = {mad_percentage:.2f}%'
     ax.text(0.98, 0.02, summary_text, transform=ax.transAxes, horizontalalignment='right',
            verticalalignment='bottom', fontsize=7,
            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='black', linewidth=0.5))

@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 import sys
+from matplotlib.transforms import blended_transform_factory
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "inputs"))
 from common import clone_compas_repo
@@ -136,16 +137,29 @@ def plot_gregory_pbe0_xtb_vs_compas_xtb(exess_df, compas3x_df, gregory_pbe0_df, 
 
 def plot_by_basis(df, output_dir, plot_type='timings'):
     """Plot timings or TFLOP/s by number of basis functions with error bars."""
+    # Filter to only revDSD-PBEP86-D4 functional
+    df = df[df['functional'] == 'revDSD-PBEP86-D4'].copy()
+    
     cols = (['total_time_s', 'mp2_time_s', 'b_formation_time_s', 'ri_fock_time_s', 'xc_time_s'] if plot_type == 'timings'
            else ['total_tflop/s', 'mp2_tflop/s', 'b_formation_tflop/s', 'ri_fock_tflop/s', 'xc_tflop/s'])
     basis_col = 'n_primary_basis_functions'
     
-    df_plot = df[[basis_col] + cols].dropna()
+    df_plot = df[[basis_col, 'n_carbons'] + cols].dropna()
     df_plot = df_plot[df_plot[basis_col] >= 1400]
     
     grouped = df_plot.groupby(basis_col)
     means, stds = grouped[cols].mean(), grouped[cols].std()
     basis_funcs = sorted(means.index)
+    
+    # Create mapping from basis functions to carbon counts
+    basis_to_carbon = {}
+    for basis in basis_funcs:
+        carbon_values = df_plot[df_plot[basis_col] == basis]['n_carbons'].unique()
+        if len(carbon_values) > 0:
+            # Use the most common carbon count for this basis function count
+            carbon_counts = df_plot[df_plot[basis_col] == basis]['n_carbons'].value_counts()
+            if len(carbon_counts) > 0:
+                basis_to_carbon[basis] = int(carbon_counts.index[0])
     
     fig, ax = plt.subplots(figsize=(SINGLE_COLUMN_WIDTH, SINGLE_COLUMN_WIDTH * 0.75))
     colors = plt.cm.tab10(np.linspace(0, 1, len(cols)))
@@ -159,16 +173,59 @@ def plot_by_basis(df, output_dir, plot_type='timings'):
                    markersize=3, markerfacecolor='none', markeredgewidth=1)
     
     if plot_type == 'tflops':
-        ax.axhline(y=78.0, color='gray', linestyle='--', linewidth=1.0, alpha=0.7,
-                  label=r'Theoretical peak ($4 \times$ A100)')
+        ax.axhline(y=78.0, color='red', linestyle='--', linewidth=1.0, alpha=0.7,
+                  label=r'Th. peak ($4 \times$A100)')
         ax.set_ylim(bottom=0)
     else:
         ax.set_yscale('log')
     
     ax.set_xlabel(r'Number of Basis Functions', fontsize=9)
     ax.set_ylabel(r'Time (seconds)' if plot_type == 'timings' else r'TFLOP/s', fontsize=9)
-    ax.legend(loc='upper left', fontsize=7, frameon=True, fancybox=False, edgecolor='black')
+    ax.legend(loc='lower right', ncol=3, fontsize=6.5, frameon=True, fancybox=False, edgecolor='black', 
+              columnspacing=0.8, handletextpad=0.5, borderpad=0.3, labelspacing=0.3)
     ax.grid(True, alpha=0.3, linewidth=0.5)
+    
+    # Add carbon labels
+    if basis_to_carbon:
+        all_basis = sorted(df_plot[basis_col].dropna().unique())
+        carbon_to_basis = {}
+        for basis in all_basis:
+            if carbon := basis_to_carbon.get(basis):
+                carbon_to_basis.setdefault(carbon, []).append(basis)
+        
+        # Filter to only even carbon counts
+        carbon_to_basis = {carbon: basis_list for carbon, basis_list in carbon_to_basis.items() if carbon % 2 == 0}
+        
+        if carbon_to_basis:
+            ax_top = ax.twiny()
+            ax_top.set_xlim(ax.get_xlim())
+            ax_top.tick_params(axis='x', length=0, which='both')
+            ax_top.tick_params(axis='y', length=0)
+            
+            trans = blended_transform_factory(ax.transData, ax.transAxes)
+            tick_positions = []
+            for carbon in sorted(carbon_to_basis.keys()):
+                basis_list = sorted(carbon_to_basis[carbon])
+                tick_positions.extend([b for b in basis_list if b not in tick_positions])
+            
+            ax_top.set_xticks(tick_positions)
+            ax_top.set_xticklabels([""] * len(tick_positions))
+            
+            y_top, y_bottom, y_label = 1.00, 0.98, 1.015
+            for tick_pos in tick_positions:
+                ax.plot([tick_pos, tick_pos], [y_bottom, y_top], 'k-', linewidth=1.5, clip_on=False, zorder=10, transform=trans)
+            
+            for carbon in sorted(carbon_to_basis.keys()):
+                basis_list = sorted(carbon_to_basis[carbon])
+                min_basis, max_basis = min(basis_list), max(basis_list)
+                ax.plot([min_basis, max_basis], [y_top, y_top], 'k-', linewidth=1.5, clip_on=False, zorder=10, transform=trans)
+                if min_basis not in tick_positions:
+                    ax.plot([min_basis, min_basis], [y_bottom, y_top], 'k-', linewidth=1.5, clip_on=False, zorder=10, transform=trans)
+                if max_basis not in tick_positions:
+                    ax.plot([max_basis, max_basis], [y_bottom, y_top], 'k-', linewidth=1.5, clip_on=False, zorder=10, transform=trans)
+                ax.text((min_basis + max_basis) / 2, y_label, f"C$_{{{carbon}}}$", ha='center', va='bottom',
+                       fontsize=7, zorder=10, transform=trans, clip_on=False)
+    
     plt.tight_layout()
     
     output_path = output_dir / f'{plot_type}_by_basis_functions.png'
