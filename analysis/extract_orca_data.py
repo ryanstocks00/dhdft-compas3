@@ -314,13 +314,35 @@ def main():
         return
 
     rows: List[Dict[str, Any]] = []
+    
+    # Debug: Count calculations by prefix
+    calc_by_prefix = {}
+    missing_files_by_prefix = {}
+    for orca_calc in common.orca_calculations:
+        prefix = orca_calc.isomer.name.split("_")[0] if "_" in orca_calc.isomer.name else "unknown"
+        calc_by_prefix[prefix] = calc_by_prefix.get(prefix, 0) + 1
+        
+        fp_prop = orca_calc.output_filepath().with_suffix(".property.txt")
+        if not fp_prop.exists() or not fp_prop.is_file():
+            missing_files_by_prefix[prefix] = missing_files_by_prefix.get(prefix, 0) + 1
+            if missing_files_by_prefix[prefix] <= 3:  # Only print first few
+                print(
+                    f"Warning: Expected file {fp_prop} for {orca_calc.isomer.name} (basis: {orca_calc.basis_id}) not found."
+                )
+    
+    print(f"\nORCA calculations by prefix: {calc_by_prefix}")
+    print(f"Missing files by prefix: {missing_files_by_prefix}")
+    if "qz_riri" in [calc.basis_id for calc in common.orca_calculations]:
+        qz_riri_calcs = [calc for calc in common.orca_calculations if calc.basis_id == "qz_riri"]
+        qz_riri_by_prefix = {}
+        for calc in qz_riri_calcs:
+            prefix = calc.isomer.name.split("_")[0] if "_" in calc.isomer.name else "unknown"
+            qz_riri_by_prefix[prefix] = qz_riri_by_prefix.get(prefix, 0) + 1
+        print(f"qz_riri calculations by prefix: {qz_riri_by_prefix}")
 
     for orca_calc in common.orca_calculations:
         fp_prop = orca_calc.output_filepath().with_suffix(".property.txt")
         if not fp_prop.exists() or not fp_prop.is_file():
-            print(
-                f"Warning: Expected file {fp_prop} for {orca_calc.input_filename} not found."
-            )
             continue
 
         sections = parse_property_file(fp_prop)
@@ -346,39 +368,49 @@ def main():
 
         rows.append(record)
 
-    # Group by (C,H,basis_combo) for relative energies
-    groups: Dict[Tuple[Any, Any, Any], List[float]] = {}
+    # Find minimum energy isomer for each (C, H) group using revDSD-PBEP86-D4
+    # (All ORCA calculations use revDSD-PBEP86-D4, so find minimum across all basis sets)
+    min_isomer_by_ch: Dict[Tuple[Any, Any], str] = {}
+    min_energy_by_ch: Dict[Tuple[Any, Any], float] = {}
     for r in rows:
         nC = r.get("num_carbons")
         nH = r.get("num_hydrogens")
-        basis_combo = r.get("basis_combo_id")
         E = safe_float(r.get("total_energy_hartree", float("nan")))
-        groups.setdefault((nC, nH, basis_combo), []).append(E)
+        if math.isnan(E):
+            continue
+        key = (nC, nH)
+        if key not in min_energy_by_ch or E < min_energy_by_ch[key]:
+            min_energy_by_ch[key] = E
+            min_isomer_by_ch[key] = r.get("isomer", "")
 
-    group_min: Dict[Tuple[Any, Any, Any], float] = {}
-    group_mean: Dict[Tuple[Any, Any, Any], float] = {}
-    for key, vals in groups.items():
-        clean = [v for v in vals if isinstance(v, (int, float)) and not math.isnan(v)]
-        if clean:
-            group_min[key] = min(clean)
-            group_mean[key] = sum(clean) / len(clean)
-        else:
-            group_min[key] = float("nan")
-            group_mean[key] = float("nan")
+    # Build lookup: (basis_combo_id, isomer) -> energy
+    energy_lookup: Dict[Tuple[Any, str], float] = {}
+    for r in rows:
+        basis_combo = r.get("basis_combo_id")
+        isomer = r.get("isomer", "")
+        E = safe_float(r.get("total_energy_hartree", float("nan")))
+        if not math.isnan(E):
+            energy_lookup[(basis_combo, isomer)] = E
 
+    # Calculate isomerization and relative energies using the minimum isomer's energy
+    # (calculated with the same basis set) as reference
     for r in rows:
         nC = r.get("num_carbons")
         nH = r.get("num_hydrogens")
-        basis_combo = r.get("basis_combo_id")
         E = safe_float(r.get("total_energy_hartree"))
-        key = (nC, nH, basis_combo)
-        Emin = group_min.get(key, float("nan"))
-        Eavg = group_mean.get(key, float("nan"))
+        key = (nC, nH)
+        min_isomer = min_isomer_by_ch.get(key, "")
+        basis_combo = r.get("basis_combo_id")
+        
+        # Find the energy of the minimum isomer calculated with the same basis set
+        ref_energy = energy_lookup.get((basis_combo, min_isomer), float("nan"))
+        
         r["isomerization_energy_hartree"] = (
-            E - Emin if not math.isnan(E) and not math.isnan(Emin) else float("nan")
+            E - ref_energy if not math.isnan(E) and not math.isnan(ref_energy) else float("nan")
         )
+        # Use the same reference (minimum isomer) for relative_energy_hartree
         r["relative_energy_hartree"] = (
-            E - Eavg if not math.isnan(E) and not math.isnan(Eavg) else float("nan")
+            E - ref_energy if not math.isnan(E) and not math.isnan(ref_energy) else float("nan")
         )
 
     # CSV column order

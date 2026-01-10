@@ -36,8 +36,8 @@ def plot_compas_comparison(exess_df, original_df, compas_type, output_dir):
     exess_df['common_id'] = exess_df['isomer_name'].apply(extract_common_id)
     
     configs = {
-        '3x': ('xTB', 'GFN2-xTB', r'revDSD-PBEP86-D4(noFC)/def2QZVPP'),
-        '3D': ('DFT', 'CAM-B3LYP-D3BJ/aug-cc-pVDZ', r'revDSD-PBEP86-D4(noFC)/def2QZVPP')
+        '3x': ('GFN2-xTB', 'GFN2-xTB', r'revDSD-PBEP86-D4(noFC)/def2QZVPP'),
+        '3D': ('CAM-B3LYP-D3BJ', 'CAM-B3LYP-D3BJ/aug-cc-pVDZ', r'revDSD-PBEP86-D4(noFC)/def2QZVPP')
     }
     if compas_type not in configs:
         return
@@ -67,21 +67,21 @@ def plot_compas_comparison(exess_df, original_df, compas_type, output_dir):
 
 
 def plot_gregory_pbe0_comparison(exess_df, gregory_pbe0_df, energy_type, output_dir, geometry_type='xtb'):
-    """Compare EXESS energies with Gregory PBE0 data (PBE0-D4 or xTB)."""
+    """Compare EXESS energies with Gregory PBE0 data (PBE0-D4 or GFN2-xTB)."""
     exess_df = exess_df.copy()
     exess_df['common_id'] = exess_df['isomer_name'].apply(extract_common_id)
     gregory_pbe0_data = gregory_pbe0_df.copy()
     
     if energy_type == 'pbe0':
-        optimizer = 'xTB' if geometry_type == 'xtb' else 'DFT'
-        exess_label = (r'xTB geometry, revDSD-PBEP86-D4(noFC)/def2QZVPP' if geometry_type == 'xtb'
+        optimizer = 'GFN2-xTB' if geometry_type == 'xtb' else 'CAM-B3LYP-D3BJ'
+        exess_label = (r'GFN2-xTB geometry, revDSD-PBEP86-D4(noFC)/def2QZVPP' if geometry_type == 'xtb'
                       else r'CAM-B3LYP-D3BJ geometry, revDSD-PBEP86-D4(noFC)/def2QZVPP')
         original_label = 'PBE0-D4/6-31G(2df,p)'
         gregory_pbe0_data['original_rel_kjmol'] = gregory_pbe0_data['D4_rel_energy'] * 4.184
         folder_suffix = f'{geometry_type}_geom'
     elif energy_type == 'xtb':
-        optimizer = 'xTB'
-        exess_label, original_label = r'xTB', 'xTB'
+        optimizer = 'GFN2-xTB'
+        exess_label, original_label = r'GFN2-xTB', 'GFN2-xTB'
         gregory_pbe0_data['original_rel_kjmol'] = gregory_pbe0_data['xtb_rel_energy_kcal_mol'] * 4.184
         folder_suffix = ''
     else:
@@ -103,7 +103,7 @@ def plot_gregory_pbe0_comparison(exess_df, gregory_pbe0_df, energy_type, output_
 
 
 def plot_gregory_pbe0_xtb_vs_compas_xtb(exess_df, compas3x_df, gregory_pbe0_df, output_dir):
-    """Compare Gregory PBE0 xTB energies with COMPAS-3x xTB energies."""
+    """Compare Gregory PBE0 GFN2-xTB energies with COMPAS-3x GFN2-xTB energies."""
     compas3x_df = compas3x_df.copy()
     compas3x_df['common_id'] = (compas3x_df['molecule'] if 'molecule' in compas3x_df.columns
                                else compas3x_df['isomer_name'].apply(extract_common_id))
@@ -125,14 +125,14 @@ def plot_gregory_pbe0_xtb_vs_compas_xtb(exess_df, compas3x_df, gregory_pbe0_df, 
     
     deviations = gregory_pbe0_xtb - compas_xtb
     top_indices = np.abs(deviations).nlargest(10).index
-    print(f"\nTop 10 biggest deviations for Gregory PBE0 xTB vs COMPAS xTB:")
+    print(f"\nTop 10 biggest deviations for Gregory PBE0 GFN2-xTB vs COMPAS GFN2-xTB:")
     for idx in top_indices:
         print(f"  {merged.loc[idx, 'common_id']}: Gregory PBE0={gregory_pbe0_xtb.loc[idx]:.2f}, "
               f"COMPAS={compas_xtb.loc[idx]:.2f}, Dev={deviations.loc[idx]:.2f} kJ/mol")
     
     output_path = output_dir / "gregory_pbe0_xtb_vs_compas_xtb_comparison" / 'gregory_pbe0_xtb_vs_compas_xtb.png'
-    create_scatter_plot(gregory_pbe0_xtb, compas_xtb, r'Gregory PBE0 xTB $\Delta E$ (kJ/mol)',
-                       r'COMPAS-3x xTB $\Delta E$ (kJ/mol)', output_path)
+    create_scatter_plot(gregory_pbe0_xtb, compas_xtb, r'Gregory PBE0 GFN2-xTB $\Delta E$ (kJ/mol)',
+                       r'COMPAS-3x GFN2-xTB $\Delta E$ (kJ/mol)', output_path)
 
 
 def plot_by_basis(df, output_dir, plot_type='timings'):
@@ -235,9 +235,9 @@ def plot_by_basis(df, output_dir, plot_type='timings'):
 
 
 def plot_energy_comparison_by_system_size(df, output_dir):
-    """Compare xTB and CAM-B3LYP optimized geometry energies for each system size."""
+    """Compare GFN2-xTB and CAM-B3LYP-D3BJ optimized geometry energies for each system size."""
     df = df.copy()
-    df['optimizer_clean'] = df['optimizer'].map({'xTB': 'xTB', 'DFT': 'CAM-B3LYP'})
+    df['optimizer_clean'] = df['optimizer'].map({'GFN2-xTB': 'GFN2-xTB', 'CAM-B3LYP-D3BJ': 'CAM-B3LYP-D3BJ'})
     df['common_id'] = df['isomer_name'].apply(extract_common_id)
     df['system_size'] = df.apply(lambda r: f"C{int(r['n_carbons'])}H{int(r['n_hydrogens'])}", axis=1)
     
@@ -247,8 +247,8 @@ def plot_energy_comparison_by_system_size(df, output_dir):
         
         for common_id in sorted(df_size['common_id'].unique()):
             id_data = df_size[df_size['common_id'] == common_id]
-            xtb_data = id_data[id_data['optimizer_clean'] == 'xTB']
-            cam_data = id_data[id_data['optimizer_clean'] == 'CAM-B3LYP']
+            xtb_data = id_data[id_data['optimizer_clean'] == 'GFN2-xTB']
+            cam_data = id_data[id_data['optimizer_clean'] == 'CAM-B3LYP-D3BJ']
             
             if len(xtb_data) > 0 and len(cam_data) > 0:
                 energy_col = 'isomerization_energy_hartree' if 'isomerization_energy_hartree' in id_data.columns else 'total_energy_hartree'

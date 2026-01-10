@@ -117,7 +117,7 @@ def main():
         print(f"\nStatistics for {basis_set}:")
         print(f"  MAD (Mean Absolute Deviation): {mad:.3f} kJ/mol")
         print(f"  RMSD (Root Mean Square Deviation): {rmsd:.3f} kJ/mol")
-        print(f"  R² (Coefficient of Determination): {r_squared:.4f}")
+        print(f"  r² (Coefficient of Determination): {r_squared:.4f}")
         print(f"  MAD as percentage: {mad_percentage:.2f}%")
         
         # Find largest deviations
@@ -166,7 +166,7 @@ def main():
             f.write("Statistics:\n")
             f.write(f"  MAD (Mean Absolute Deviation): {result['mad']:.3f} kJ/mol\n")
             f.write(f"  RMSD (Root Mean Square Deviation): {result['rmsd']:.3f} kJ/mol\n")
-            f.write(f"  R² (Coefficient of Determination): {result['r_squared']:.4f}\n")
+            f.write(f"  r² (Coefficient of Determination): {result['r_squared']:.4f}\n")
             f.write(f"  MAD as percentage: {result['mad_percentage']:.2f}%\n\n")
             
             # Find top deviations

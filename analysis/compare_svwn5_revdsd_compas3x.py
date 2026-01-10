@@ -41,9 +41,9 @@ def main():
     compas3x_df['common_id'] = compas3x_df['isomer_name'].apply(extract_common_id)
     compas3x_df = compas3x_df.dropna(subset=['common_id'])
     
-    # Filter to xTB optimizer (COMPAS-3x uses xTB geometries)
-    compas3x_df = compas3x_df[compas3x_df['optimizer'] == 'xTB'].copy()
-    print(f"Found {len(compas3x_df)} COMPAS-3x rows with xTB optimizer")
+    # Filter to GFN2-xTB optimizer (COMPAS-3x uses GFN2-xTB geometries)
+    compas3x_df = compas3x_df[compas3x_df['optimizer'] == 'GFN2-xTB'].copy()
+    print(f"Found {len(compas3x_df)} COMPAS-3x rows with GFN2-xTB optimizer")
     
     # Separate SVWN5 and revDSD-PBEP86-D4 data
     svwn5_df = compas3x_df[compas3x_df['functional'] == 'SVWN5'].copy()
@@ -99,7 +99,7 @@ def main():
     print(f"  Number of matched structures: {len(merged)}")
     print(f"  MAD (Mean Absolute Deviation): {mad_kjmol:.3f} kJ/mol")
     print(f"  RMSD (Root Mean Square Deviation): {rmsd:.3f} kJ/mol")
-    print(f"  R² (Coefficient of Determination): {r_squared:.4f}")
+    print(f"  r² (Coefficient of Determination): {r_squared:.4f}")
     print(f"  MAD as percentage: {mad_percentage:.2f}%")
     
     # Find largest deviations
@@ -131,7 +131,7 @@ def main():
         f.write("Statistics:\n")
         f.write(f"  MAD (Mean Absolute Deviation): {mad_kjmol:.3f} kJ/mol\n")
         f.write(f"  RMSD (Root Mean Square Deviation): {rmsd:.3f} kJ/mol\n")
-        f.write(f"  R² (Coefficient of Determination): {r_squared:.4f}\n")
+            f.write(f"  r² (Coefficient of Determination): {r_squared:.4f}\n")
         f.write(f"  MAD as percentage: {mad_percentage:.2f}%\n\n")
         
         # Find top deviations

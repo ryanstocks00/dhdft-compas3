@@ -230,6 +230,8 @@ for isomer in all_compas3_graphene_isomers:
     if isomer_base_name in size_profiling_isomer_names:
         for basis_name in basis_combos.keys():
             orca_calculations.append(ORCACalculationToPerform(isomer, basis_name))
+    elif isomer.carbons == 24 and isomer.hydrogens == 14:
+        orca_calculations.append(ORCACalculationToPerform(isomer, "qz_riri"))
 
 
 def basis_to_aux_basis(basis: str) -> str:

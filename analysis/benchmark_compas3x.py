@@ -4,18 +4,20 @@
 import argparse
 import pandas as pd
 import numpy as np
+import re
 from pathlib import Path
 from scipy.stats import linregress
 from plotting_utils import create_scatter_plot, HARTREE_TO_KJ_PER_MOL, calculate_stats, extract_common_id, format_functional_name
 
 
-def compute_isomerization_energies(df, include_d4, reference_method):
+def compute_isomerization_energies(df, include_d4, reference_method, revdsd_min_isomers=None):
     """Compute isomerization energies from a dataframe.
     
     Args:
         df: Dataframe with energy columns
         include_d4: If True, use total_energy_hartree, else use scf_energy_hartree
-        reference_method: 'min' or 'avg' for reference energy calculation
+        reference_method: 'min' or 'avg' for reference energy calculation (ignored if revdsd_min_isomers provided)
+        revdsd_min_isomers: Dict mapping (n_carbons, n_hydrogens) -> common_id of minimum energy isomer from revDSD-PBEP86-D4
     
     Returns:
         Series with isomerization energies indexed by common_id
@@ -31,14 +33,37 @@ def compute_isomerization_energies(df, include_d4, reference_method):
     if df[['n_carbons', 'n_hydrogens']].isna().any().any():
         raise ValueError("Missing n_carbons or n_hydrogens")
     
-    group_cols = ['functional', 'basis_set', 'n_carbons', 'n_hydrogens']
-    agg_method = 'mean' if reference_method == 'avg' else reference_method
-    ref_energy = df.groupby(group_cols)['energy'].agg(agg_method).to_dict()
-    df['ref_energy'] = df.apply(lambda r: ref_energy.get(tuple(r[c] for c in group_cols)), axis=1)
-    
-    if df['ref_energy'].isna().any():
-        missing = df[df['ref_energy'].isna()][['common_id'] + group_cols].drop_duplicates()
-        raise ValueError(f"Could not find reference energy:\n{missing.head(10)}")
+    # Use revDSD-PBEP86-D4 minimum isomer if provided
+    if revdsd_min_isomers is not None:
+        # Build lookup: (basis_set, common_id) -> energy for this functional
+        energy_lookup = {}
+        for _, row in df.iterrows():
+            key = (row['basis_set'], row['common_id'])
+            energy_lookup[key] = row['energy']
+        
+        # For each row, find the energy of the minimum isomer (calculated with same basis_set)
+        def get_ref_energy(row):
+            ch_key = (row['n_carbons'], row['n_hydrogens'])
+            min_common_id = revdsd_min_isomers.get(ch_key)
+            if min_common_id is None:
+                return None
+            lookup_key = (row['basis_set'], min_common_id)
+            return energy_lookup.get(lookup_key)
+        
+        df['ref_energy'] = df.apply(get_ref_energy, axis=1)
+        if df['ref_energy'].isna().any():
+            missing = df[df['ref_energy'].isna()][['common_id', 'n_carbons', 'n_hydrogens', 'basis_set']].drop_duplicates()
+            raise ValueError(f"Could not find reference energy for minimum isomer:\n{missing.head(10)}")
+    else:
+        # Fallback to old method (per functional/basis group)
+        group_cols = ['functional', 'basis_set', 'n_carbons', 'n_hydrogens']
+        agg_method = 'mean' if reference_method == 'avg' else reference_method
+        ref_energy = df.groupby(group_cols)['energy'].agg(agg_method).to_dict()
+        df['ref_energy'] = df.apply(lambda r: ref_energy.get(tuple(r[c] for c in group_cols)), axis=1)
+        
+        if df['ref_energy'].isna().any():
+            missing = df[df['ref_energy'].isna()][['common_id'] + group_cols].drop_duplicates()
+            raise ValueError(f"Could not find reference energy:\n{missing.head(10)}")
     
     df['isomerization_energy'] = df['energy'] - df['ref_energy']
     return df.set_index('common_id')['isomerization_energy']
@@ -69,7 +94,7 @@ def find_minimum_energy_isomers(df, include_d4):
 
 
 def process_functional_comparison(df, functional, reference_functional='revDSD-PBEP86-D4',
-                                  include_d4=True, output_dir=None, reference_method='min'):
+                                  include_d4=True, output_dir=None, reference_method='min', plot_limits=None, quiet=False):
     """Process comparison for a specific functional."""
     # Filter to COMPAS-3x geometries
     compas3x_df = df[
@@ -93,38 +118,20 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
     func_df_common = func_df[func_df['common_id'].isin(common_ids)].copy()
     ref_df_common = ref_df[ref_df['common_id'].isin(common_ids)].copy()
     
+    # Find minimum energy isomer (common_id) for each (C, H) group using revDSD-PBEP86-D4
+    revdsd_min_isomers = {}
+    for (n_c, n_h), group in ref_df_common.groupby(['n_carbons', 'n_hydrogens']):
+        min_idx = group['total_energy_hartree'].idxmin()
+        min_common_id = group.loc[min_idx, 'common_id']
+        revdsd_min_isomers[(n_c, n_h)] = min_common_id
+    
     # For linear fit, we still need to compute isomerization energies first (use 'min' as base)
     # The linear fit correction will be applied to the isomerization energies afterward
     base_reference_method = 'min' if reference_method == 'linear_fit' else reference_method
     
-    # Check if minimum energy isomers differ (only for 'min' method)
-    if base_reference_method == 'min':
-        func_min_isomers = find_minimum_energy_isomers(func_df_common, include_d4)
-        ref_min_isomers = find_minimum_energy_isomers(ref_df_common, True)  # Always use total_energy for reference
-        
-        # Find C/H groups where minimum energy isomers differ
-        differing_groups = []
-        for ch_key in func_min_isomers:
-            if ch_key in ref_min_isomers:
-                if func_min_isomers[ch_key] != ref_min_isomers[ch_key]:
-                    differing_groups.append({
-                        'n_c': ch_key[0],
-                        'n_h': ch_key[1],
-                        'func_min': func_min_isomers[ch_key],
-                        'ref_min': ref_min_isomers[ch_key]
-                    })
-        
-        if differing_groups:
-            print(f"\n⚠️  WARNING: Minimum energy isomers differ between {functional} and {reference_functional}:")
-            for group in differing_groups[:10]:  # Show first 10
-                print(f"  C{group['n_c']}H{group['n_h']}: {functional} min = {group['func_min']}, "
-                      f"{reference_functional} min = {group['ref_min']}")
-            if len(differing_groups) > 10:
-                print(f"  ... and {len(differing_groups) - 10} more groups")
-    
-    # Compute isomerization energies
-    func_energies = compute_isomerization_energies(func_df_common, include_d4, base_reference_method)
-    ref_energies = compute_isomerization_energies(ref_df_common, True, base_reference_method)  # Always use total_energy for reference
+    # Compute isomerization energies using the minimum isomer's energy (calculated with each functional) as reference
+    func_energies = compute_isomerization_energies(func_df_common, include_d4, base_reference_method, revdsd_min_isomers)
+    ref_energies = compute_isomerization_energies(ref_df_common, True, base_reference_method, revdsd_min_isomers)  # Always use total_energy for reference
     
     # Merge to get common structures
     merged = func_df_common[['common_id']].merge(
@@ -154,11 +161,222 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
     deviations = func_energies_kjmol - ref_energies_kjmol
     
     mad_kjmol = np.mean(np.abs(deviations))
+    msd_kjmol = np.mean(deviations)
     rmsd = np.sqrt(np.mean(deviations ** 2))
     r_squared, _, mad_percentage = calculate_stats(ref_energies_kjmol, func_energies_kjmol)
     
+    # Calculate additional statistics
+    n_negative_isomer_energies = (func_energies_kjmol < 0).sum()
+    n_overestimated = (deviations > 0).sum()
+    n_underestimated = (deviations < 0).sum()
+    n_overestimates_over_100 = (deviations > 100).sum()
+    max_deviation = deviations.max()
+    min_deviation = deviations.min()
+    
+    # Print results (unless quiet mode)
+    if not quiet:
+        d4_label = "with D4" if include_d4 else "without D4"
+        if reference_method == 'linear_fit':
+            ref_method_label = "linear fit corrected"
+        elif reference_method == 'min':
+            ref_method_label = "minimum"
+        else:
+            ref_method_label = "average"
+        print(f"\n{'='*60}")
+        print(f"{functional} ({d4_label}, relative to {ref_method_label}) vs {reference_functional} (COMPAS-3x)")
+        print(f"{'='*60}")
+        print(f"Number of matched structures: {len(merged)}")
+        if gradient is not None and offset is not None:
+            print(f"  Linear fit: gradient = {gradient:.4f}, offset = {offset:.3f} kJ/mol")
+        print(f"  MAD: {mad_kjmol:.3f} kJ/mol")
+        print(f"  MSD: {msd_kjmol:.3f} kJ/mol")
+        print(f"  RMSD: {rmsd:.3f} kJ/mol")
+        print(f"  r²: {r_squared:.4f}")
+        print(f"  MAD as percentage: {mad_percentage:.2f}%")
+        print(f"  Number of negative isomer energies: {n_negative_isomer_energies}")
+        print(f"  Number of overestimated isomer energies: {n_overestimated}")
+        print(f"  Number of underestimated isomer energies: {n_underestimated}")
+        print(f"  Number of overestimates over 100 kJ/mol: {n_overestimates_over_100}")
+        print(f"  Maximum deviation: {max_deviation:.3f} kJ/mol")
+        print(f"  Minimum deviation: {min_deviation:.3f} kJ/mol")
+        
+        # Top deviations
+        print(f"\nTop 10 largest deviations:")
+        top_indices = deviations.abs().nlargest(10).index
+        for idx in top_indices:
+            print(f"  {merged.loc[idx, 'common_id']}: {deviations.loc[idx]:.3f} kJ/mol")
+    else:
+        d4_label = "with D4" if include_d4 else "without D4"
+    
+    # Create scatter plot
+    if output_dir:
+        func_safe = functional.replace('-', '_').replace('(', '').replace(')', '').replace('/', '_')
+        d4_suffix = "_with_d4" if include_d4 else "_without_d4"
+        plot_path = output_dir / f'compas3x_{func_safe}{d4_suffix}_vs_revdsd.png'
+        plot_path_small = output_dir / f'compas3x_{func_safe}{d4_suffix}_vs_revdsd_small.png'
+        # Format functional names for display
+        func_display = format_functional_name(functional)
+        ref_display = format_functional_name(reference_functional)
+        # Create regular-sized plot
+        xlim = plot_limits[0] if plot_limits else None
+        ylim = plot_limits[1] if plot_limits else None
+        create_scatter_plot(
+            ref_energies_kjmol, func_energies_kjmol,
+            rf'{ref_display} $\Delta E$ (kJ/mol)',
+            rf'{func_display} ({d4_label}) $\Delta E$ (kJ/mol)',
+            plot_path, mad_kjmol=mad_kjmol, msd_kjmol=msd_kjmol, xlim=xlim, ylim=ylim
+        )
+        if not quiet:
+            print(f"\nPlot saved to: {plot_path}")
+        # Create small version for two-across single column layout
+        create_scatter_plot(
+            ref_energies_kjmol, func_energies_kjmol,
+            rf'{ref_display} $\Delta E$ (kJ/mol)',
+            rf'{func_display} ({d4_label}) $\Delta E$ (kJ/mol)',
+            plot_path_small, mad_kjmol=mad_kjmol, msd_kjmol=msd_kjmol, figsize=(1.65, 1.65), xlim=xlim, ylim=ylim
+        )
+        if not quiet:
+            print(f"Small plot saved to: {plot_path_small}")
+    
+    return {
+        'functional': functional, 'include_d4': include_d4, 'n_structures': len(merged),
+        'mad_kjmol': mad_kjmol, 'msd_kjmol': msd_kjmol, 'rmsd': rmsd, 'r_squared': r_squared, 'mad_percentage': mad_percentage,
+        'n_negative_isomer_energies': n_negative_isomer_energies,
+        'n_overestimated': n_overestimated, 'n_underestimated': n_underestimated,
+        'n_overestimates_over_100': n_overestimates_over_100,
+        'max_deviation': max_deviation, 'min_deviation': min_deviation,
+        'merged': merged, 'func_energies': func_energies_kjmol, 'ref_energies': ref_energies_kjmol,
+        'deviations': deviations, 'gradient': gradient, 'offset': offset
+    }
+
+
+def process_xtb_comparison(df, reference_functional='revDSD-PBEP86-D4', output_dir=None, reference_method='min'):
+    """Process comparison for GFN2-xTB."""
+    # Filter to COMPAS-3x geometries
+    compas3x_df = df[
+        (df['isomer_name'].str.contains('compas3x', case=False, na=False)) &
+        (df['optimizer'] == 'xTB')
+    ].copy()
+    compas3x_df['common_id'] = compas3x_df['isomer_name'].apply(extract_common_id)
+    compas3x_df = compas3x_df.dropna(subset=['common_id'])
+    
+    # Get revDSD-PBEP86-D4 data
+    ref_df = compas3x_df[compas3x_df['functional'] == reference_functional].copy()
+    
+    if len(ref_df) == 0:
+        return None
+    
+    # Find minimum energy isomer for each (C, H) group using revDSD-PBEP86-D4
+    revdsd_min_isomers = {}
+    for (n_c, n_h), group in ref_df.groupby(['n_carbons', 'n_hydrogens']):
+        min_idx = group['total_energy_hartree'].idxmin()
+        min_common_id = group.loc[min_idx, 'common_id']
+        revdsd_min_isomers[(n_c, n_h)] = min_common_id
+    
+    # Load COMPAS-3x data for xTB energies from local cache
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    compas3x_path = project_root / '.compas_cache' / 'compas' / 'COMPAS-3' / 'compas-3x.csv'
+    
+    if not compas3x_path.exists():
+        print(f"Warning: COMPAS-3x CSV not found at {compas3x_path}")
+        return None
+    
+    compas3x_data = pd.read_csv(compas3x_path)
+    
+    # Extract common_id from molecule column
+    if 'molecule' not in compas3x_data.columns:
+        print("Warning: 'molecule' column not found in COMPAS-3x data")
+        return None
+    
+    compas3x_data['common_id'] = compas3x_data['molecule'].apply(extract_common_id)
+    
+    # Extract n_carbons and n_hydrogens from common_id (format: c16h10_0pent_1)
+    def extract_carbons_hydrogens(common_id):
+        match = re.match(r'c(\d+)h(\d+)', common_id)
+        if match:
+            return int(match.group(1)), int(match.group(2))
+        return None, None
+    
+    compas3x_data[['n_carbons', 'n_hydrogens']] = compas3x_data['common_id'].apply(
+        lambda x: pd.Series(extract_carbons_hydrogens(x))
+    )
+    
+    # Get GFN2-xTB absolute energies (convert from eV to hartree)
+    if 'Etot_eV' not in compas3x_data.columns:
+        print("Warning: 'Etot_eV' column not found in COMPAS-3x data")
+        return None
+    
+    # Convert eV to hartree (1 eV = 0.0367493 hartree)
+    compas3x_data['xtb_energy_hartree'] = compas3x_data['Etot_eV'] * 0.0367493
+    
+    # Build lookup for xTB energies by common_id
+    xtb_energy_lookup = compas3x_data.set_index('common_id')['xtb_energy_hartree'].to_dict()
+    
+    # Compute xTB isomerization energies relative to minimum revDSD-PBEP86-D4 isomer
+    def compute_xtb_isomerization(row):
+        ch_key = (row['n_carbons'], row['n_hydrogens'])
+        min_common_id = revdsd_min_isomers.get(ch_key)
+        if min_common_id is None:
+            return None
+        xtb_energy = xtb_energy_lookup.get(row['common_id'])
+        xtb_min_energy = xtb_energy_lookup.get(min_common_id)
+        if xtb_energy is None or xtb_min_energy is None:
+            return None
+        return xtb_energy - xtb_min_energy
+    
+    compas3x_data['xtb_isomerization_hartree'] = compas3x_data.apply(compute_xtb_isomerization, axis=1)
+    
+    # Compute reference isomerization energies
+    ref_energies = compute_isomerization_energies(ref_df, True, reference_method, revdsd_min_isomers)
+    
+    # Merge to get common structures
+    merged = ref_df[['common_id']].merge(
+        compas3x_data[['common_id', 'xtb_isomerization_hartree']],
+        on='common_id',
+        how='inner'
+    )
+    merged = merged.dropna(subset=['xtb_isomerization_hartree'])
+    merged = merged.merge(ref_energies.to_frame('isomerization_energy_ref'), left_on='common_id', right_index=True)
+    
+    if len(merged) == 0:
+        print("Warning: No matching structures found between GFN2-xTB and revDSD-PBEP86-D4")
+        return None
+    
+    if merged[['xtb_isomerization_hartree', 'isomerization_energy_ref']].isna().any().any():
+        raise ValueError("NaN isomerization energies found")
+    
+    # Convert to kJ/mol
+    xtb_energies_kjmol = merged['xtb_isomerization_hartree'] * HARTREE_TO_KJ_PER_MOL
+    ref_energies_kjmol = merged['isomerization_energy_ref'] * HARTREE_TO_KJ_PER_MOL
+    
+    # Apply linear fit correction if requested
+    gradient = None
+    offset = None
+    if reference_method == 'linear_fit':
+        # Fit: xtb = gradient * ref + offset
+        slope, intercept, r_value, p_value, std_err = linregress(ref_energies_kjmol, xtb_energies_kjmol)
+        gradient = slope
+        offset = intercept
+        # Correct: xtb_corrected = (xtb - offset) / gradient
+        xtb_energies_kjmol = (xtb_energies_kjmol - offset) / gradient
+    
+    deviations = xtb_energies_kjmol - ref_energies_kjmol
+    
+    mad_kjmol = np.mean(np.abs(deviations))
+    msd_kjmol = np.mean(deviations)
+    rmsd = np.sqrt(np.mean(deviations ** 2))
+    r_squared, _, mad_percentage = calculate_stats(ref_energies_kjmol, xtb_energies_kjmol)
+    
+    # Calculate additional statistics
+    n_negative_isomer_energies = (xtb_energies_kjmol < 0).sum()
+    n_overestimated = (deviations > 0).sum()
+    n_underestimated = (deviations < 0).sum()
+    n_overestimates_over_100 = (deviations > 100).sum()
+    max_deviation = deviations.max()
+    min_deviation = deviations.min()
+    
     # Print results
-    d4_label = "with D4" if include_d4 else "without D4"
     if reference_method == 'linear_fit':
         ref_method_label = "linear fit corrected"
     elif reference_method == 'min':
@@ -166,15 +384,22 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
     else:
         ref_method_label = "average"
     print(f"\n{'='*60}")
-    print(f"{functional} ({d4_label}, relative to {ref_method_label}) vs {reference_functional} (COMPAS-3x)")
+    print(f"GFN2-xTB (relative to {ref_method_label}) vs {reference_functional} (COMPAS-3x)")
     print(f"{'='*60}")
     print(f"Number of matched structures: {len(merged)}")
     if gradient is not None and offset is not None:
         print(f"  Linear fit: gradient = {gradient:.4f}, offset = {offset:.3f} kJ/mol")
     print(f"  MAD: {mad_kjmol:.3f} kJ/mol")
+    print(f"  MSD: {msd_kjmol:.3f} kJ/mol")
     print(f"  RMSD: {rmsd:.3f} kJ/mol")
-    print(f"  R²: {r_squared:.4f}")
+    print(f"  r²: {r_squared:.4f}")
     print(f"  MAD as percentage: {mad_percentage:.2f}%")
+    print(f"  Number of negative isomer energies: {n_negative_isomer_energies}")
+    print(f"  Number of overestimated isomer energies: {n_overestimated}")
+    print(f"  Number of underestimated isomer energies: {n_underestimated}")
+    print(f"  Number of overestimates over 100 kJ/mol: {n_overestimates_over_100}")
+    print(f"  Maximum deviation: {max_deviation:.3f} kJ/mol")
+    print(f"  Minimum deviation: {min_deviation:.3f} kJ/mol")
     
     # Top deviations
     print(f"\nTop 10 largest deviations:")
@@ -182,26 +407,17 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
     for idx in top_indices:
         print(f"  {merged.loc[idx, 'common_id']}: {deviations.loc[idx]:.3f} kJ/mol")
     
-    # Create scatter plot
-    if output_dir:
-        func_safe = functional.replace('-', '_').replace('(', '').replace(')', '').replace('/', '_')
-        d4_suffix = "_with_d4" if include_d4 else "_without_d4"
-        plot_path = output_dir / f'compas3x_{func_safe}{d4_suffix}_vs_revdsd.png'
-        # Format functional names for display
-        func_display = format_functional_name(functional)
-        ref_display = format_functional_name(reference_functional)
-        create_scatter_plot(
-            ref_energies_kjmol, func_energies_kjmol,
-            f'{ref_display} $\Delta E$ (kJ/mol)',
-            f'{func_display} ({d4_label}) $\Delta E$ (kJ/mol)',
-            plot_path, mad_kjmol=mad_kjmol
-        )
-        print(f"\nPlot saved to: {plot_path}")
+    # Create scatter plot (already done by generate_supporting_info.py, but we could create it here too)
+    # The plot is handled separately in generate_supporting_info.py
     
     return {
-        'functional': functional, 'include_d4': include_d4, 'n_structures': len(merged),
-        'mad_kjmol': mad_kjmol, 'rmsd': rmsd, 'r_squared': r_squared, 'mad_percentage': mad_percentage,
-        'merged': merged, 'func_energies': func_energies_kjmol, 'ref_energies': ref_energies_kjmol,
+        'functional': 'GFN2-xTB', 'include_d4': None, 'n_structures': len(merged),
+        'mad_kjmol': mad_kjmol, 'msd_kjmol': msd_kjmol, 'rmsd': rmsd, 'r_squared': r_squared, 'mad_percentage': mad_percentage,
+        'n_negative_isomer_energies': n_negative_isomer_energies,
+        'n_overestimated': n_overestimated, 'n_underestimated': n_underestimated,
+        'n_overestimates_over_100': n_overestimates_over_100,
+        'max_deviation': max_deviation, 'min_deviation': min_deviation,
+        'merged': merged, 'func_energies': xtb_energies_kjmol, 'ref_energies': ref_energies_kjmol,
         'deviations': deviations, 'gradient': gradient, 'offset': offset
     }
 
@@ -210,19 +426,30 @@ def generate_latex_table(results, output_path):
     """Generate a LaTeX table with MAD values for each functional."""
     # Organize results by functional
     func_data = {}
+    xtb_data = None
     for result in results:
         func = result['functional']
-        if func not in func_data:
-            func_data[func] = {}
-        key = 'with_d4' if result['include_d4'] else 'without_d4'
-        func_data[func][key] = {
-            'mad': result['mad_kjmol'], 'r_squared': result['r_squared'],
-            'gradient': result.get('gradient'), 'offset': result.get('offset')
-        }
+        if func == 'GFN2-xTB':
+            # xTB doesn't have with/without D4 variants
+            xtb_data = {
+                'mad': result['mad_kjmol'], 'msd': result['msd_kjmol'], 'r_squared': result['r_squared'],
+                'gradient': result.get('gradient'), 'offset': result.get('offset')
+            }
+        else:
+            if func not in func_data:
+                func_data[func] = {}
+            key = 'with_d4' if result['include_d4'] else 'without_d4'
+            func_data[func][key] = {
+                'mad': result['mad_kjmol'], 'msd': result['msd_kjmol'], 'r_squared': result['r_squared'],
+                'gradient': result.get('gradient'), 'offset': result.get('offset')
+            }
     
-    # Find best values
+    # Find best values (including xTB)
     all_mads = [d[k]['mad'] for d in func_data.values() for k in d]
     all_r2s = [d[k]['r_squared'] for d in func_data.values() for k in d]
+    if xtb_data is not None:
+        all_mads.append(xtb_data['mad'])
+        all_r2s.append(xtb_data['r_squared'])
     best_mad = min(all_mads) if all_mads else None
     best_r2 = max(all_r2s) if all_r2s else None
     
@@ -254,18 +481,52 @@ def generate_latex_table(results, output_path):
         )
         
         if has_linear_fit:
-            f.write("\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{}}\n")
+            f.write("\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{}}\n")
+            f.write("\\toprule\n")
+            f.write(" & \\multirow{3}{*}{\\textbf{Functional}} & \\multicolumn{4}{c}{\\textbf{Without D4}} & \\multicolumn{4}{c}{\\textbf{With D4}} \\\\\n")
+            f.write("\\cmidrule(lr){3-6} \\cmidrule(lr){7-10}\n")
+            f.write(" & & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{\\textbf{r²}\\vspace{0.5em}} & \\shortstack{\\textbf{Gradient/}\\\\\\textbf{Offset}} & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{\\textbf{r²}\\vspace{0.5em}} & \\shortstack{\\textbf{Gradient/}\\\\\\textbf{Offset}} \\\\\n")
+        else:
+            f.write("\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{}}\n")
             f.write("\\toprule\n")
             f.write(" & \\multirow{3}{*}{\\textbf{Functional}} & \\multicolumn{3}{c}{\\textbf{Without D4}} & \\multicolumn{3}{c}{\\textbf{With D4}} \\\\\n")
             f.write("\\cmidrule(lr){3-5} \\cmidrule(lr){6-8}\n")
-            f.write(" & & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\textbf{R²} & \\shortstack{\\textbf{Gradient/}\\\\\\textbf{Offset}} & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\textbf{R²} & \\shortstack{\\textbf{Gradient/}\\\\\\textbf{Offset}} \\\\\n")
-        else:
-            f.write("\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{}}\n")
-            f.write("\\toprule\n")
-            f.write(" & \\multirow{3}{*}{\\textbf{Functional}} & \\multicolumn{2}{c}{\\textbf{Without D4}} & \\multicolumn{2}{c}{\\textbf{With D4}} \\\\\n")
-            f.write("\\cmidrule(lr){3-4} \\cmidrule(lr){5-6}\n")
-            f.write(" & & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\textbf{R²} & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\textbf{R²} \\\\\n")
+            f.write(" & & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{\\textbf{r²}\\vspace{0.5em}} & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{\\textbf{r²}\\vspace{0.5em}} \\\\\n")
         f.write("\\midrule\n")
+        
+        # Define formatting functions
+        def format_value(val, best_val, is_r2=False):
+            if val is None:
+                return "---"
+            fmt = f"{val:.3f}" if is_r2 else f"{val:.2f}"
+            threshold = 0.001 if is_r2 else 0.01
+            if best_val is not None and abs(val - best_val) < threshold:
+                return f"\\textbf{{{fmt}}}"
+            return fmt
+        
+        def format_fit_params(gradient, offset):
+            if gradient is None or offset is None:
+                return "---"
+            return f"{gradient:.3f}/{offset:.2f}"
+        
+        # Add GFN2-xTB row at the top if present
+        if xtb_data is not None:
+            xtb_mad = xtb_data.get('mad')
+            xtb_msd = xtb_data.get('msd')
+            xtb_r2 = xtb_data.get('r_squared')
+            xtb_gradient = xtb_data.get('gradient')
+            xtb_offset = xtb_data.get('offset')
+            
+            xtb_mad_str = format_value(xtb_mad, best_mad)
+            xtb_msd_str = format_value(xtb_msd, None)  # MSD doesn't have a "best" value
+            xtb_r2_str = format_value(xtb_r2, best_r2, True)
+            xtb_fit = format_fit_params(xtb_gradient, xtb_offset)
+            
+            if has_linear_fit:
+                f.write(f" & GFN2--xTB & --- & --- & --- & --- & {xtb_mad_str} & {xtb_msd_str} & {xtb_r2_str} & {xtb_fit} \\\\\n")
+            else:
+                f.write(f" & GFN2--xTB & --- & --- & --- & {xtb_mad_str} & {xtb_msd_str} & {xtb_r2_str} \\\\\n")
+            f.write("\\midrule\n")
         
         current_category = None
         category_counts = {'LDA': sum(1 for f in lda_functionals if f in func_data),
@@ -303,26 +564,14 @@ def generate_latex_table(results, output_path):
             else:
                 func_display = func.replace('-', '--')
             
-            def format_value(val, best_val, is_r2=False):
-                if val is None:
-                    return "---"
-                fmt = f"{val:.3f}" if is_r2 else f"{val:.2f}"
-                threshold = 0.001 if is_r2 else 0.01
-                if best_val is not None and abs(val - best_val) < threshold:
-                    return f"\\textbf{{{fmt}}}"
-                return fmt
-            
             without_d4_str = format_value(data.get('without_d4', {}).get('mad'), best_mad)
+            without_d4_msd_str = format_value(data.get('without_d4', {}).get('msd'), None)  # MSD doesn't have a "best" value
             without_d4_r2_str = format_value(data.get('without_d4', {}).get('r_squared'), best_r2, True)
             with_d4_str = format_value(data.get('with_d4', {}).get('mad'), best_mad)
+            with_d4_msd_str = format_value(data.get('with_d4', {}).get('msd'), None)  # MSD doesn't have a "best" value
             with_d4_r2_str = format_value(data.get('with_d4', {}).get('r_squared'), best_r2, True)
             
             # Format gradient and offset if available
-            def format_fit_params(gradient, offset):
-                if gradient is None or offset is None:
-                    return "---"
-                return f"{gradient:.3f}/{offset:.2f}"
-            
             without_d4_fit = format_fit_params(
                 data.get('without_d4', {}).get('gradient'),
                 data.get('without_d4', {}).get('offset')
@@ -334,18 +583,53 @@ def generate_latex_table(results, output_path):
             
             if has_linear_fit:
                 if is_first_in_category and category_counts.get(category, 0) == 1:
-                    f.write(f" & \\raisebox{{-0.5\\height}}{{{func_display}}} & \\raisebox{{-0.5\\height}}{{{without_d4_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_fit}}} & \\raisebox{{-0.5\\height}}{{{with_d4_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_fit}}} \\\\[2ex]\n")
+                    f.write(f" & \\raisebox{{-0.5\\height}}{{{func_display}}} & \\raisebox{{-0.5\\height}}{{{without_d4_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_msd_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_fit}}} & \\raisebox{{-0.5\\height}}{{{with_d4_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_msd_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_fit}}} \\\\[2ex]\n")
                 else:
-                    f.write(f" & {func_display} & {without_d4_str} & {without_d4_r2_str} & {without_d4_fit} & {with_d4_str} & {with_d4_r2_str} & {with_d4_fit} \\\\\n")
+                    f.write(f" & {func_display} & {without_d4_str} & {without_d4_msd_str} & {without_d4_r2_str} & {without_d4_fit} & {with_d4_str} & {with_d4_msd_str} & {with_d4_r2_str} & {with_d4_fit} \\\\\n")
             else:
                 if is_first_in_category and category_counts.get(category, 0) == 1:
-                    f.write(f" & \\raisebox{{-0.5\\height}}{{{func_display}}} & \\raisebox{{-0.5\\height}}{{{without_d4_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_r2_str}}} \\\\[2ex]\n")
+                    f.write(f" & \\raisebox{{-0.5\\height}}{{{func_display}}} & \\raisebox{{-0.5\\height}}{{{without_d4_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_msd_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_msd_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_r2_str}}} \\\\[2ex]\n")
                 else:
-                    f.write(f" & {func_display} & {without_d4_str} & {without_d4_r2_str} & {with_d4_str} & {with_d4_r2_str} \\\\\n")
+                    f.write(f" & {func_display} & {without_d4_str} & {without_d4_msd_str} & {without_d4_r2_str} & {with_d4_str} & {with_d4_msd_str} & {with_d4_r2_str} \\\\\n")
         
         f.write("\\bottomrule\n\\end{tabular}\n")
-        f.write("\\caption{Mean Absolute Deviation (MAD) and coefficient of determination (R²) of isomerization energies for COMPAS-3x geometries relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP. All calculations performed with (99,590) grid and def2-TZVP basis set. Best values across all functionals are highlighted in bold.}\n")
+        caption = "Mean Absolute Deviation (MAD), Mean Signed Deviation (MSD), and coefficient of determination (r²) of isomerization energies for COMPAS-3x geometries relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP. All DFT calculations performed with (99,590) grid and def2-TZVP basis set. GFN2-xTB results are from semiempirical calculations. Best values across all methods are highlighted in bold."
+        f.write(f"\\caption{{{caption}}}\n")
         f.write("\\label{tab:compas3x_benchmarks}\n\\end{table}\n")
+
+
+def save_results_to_csv(results, output_path):
+    """Save all benchmark results to a CSV file.
+    
+    Args:
+        results: List of result dictionaries from process_functional_comparison or process_xtb_comparison
+        output_path: Path to save the CSV file
+    """
+    rows = []
+    for result in results:
+        row = {
+            'functional': result['functional'],
+            'include_d4': 'Yes' if result['include_d4'] else 'No' if result['include_d4'] is False else 'N/A',
+            'n_structures': result['n_structures'],
+            'mad_kjmol': result['mad_kjmol'],
+            'msd_kjmol': result['msd_kjmol'],
+            'rmsd_kjmol': result['rmsd'],
+            'r_squared': result['r_squared'],
+            'mad_percentage': result['mad_percentage'],
+            'n_negative_isomer_energies': result['n_negative_isomer_energies'],
+            'n_overestimated': result['n_overestimated'],
+            'n_underestimated': result['n_underestimated'],
+            'n_overestimates_over_100': result['n_overestimates_over_100'],
+            'max_deviation_kjmol': result['max_deviation'],
+            'min_deviation_kjmol': result['min_deviation'],
+            'gradient': result.get('gradient'),
+            'offset_kjmol': result.get('offset')
+        }
+        rows.append(row)
+    
+    df = pd.DataFrame(rows)
+    df.to_csv(output_path, index=False)
+    print(f"Results saved to CSV: {output_path}")
 
 
 def main():
@@ -371,6 +655,12 @@ def main():
     df = pd.read_csv(csv_path)
     print(f"Loaded {len(df)} rows from CSV")
     
+    # Check if required columns exist
+    if 'functional' not in df.columns:
+        print("\nERROR: The CSV file is missing the 'functional' column.")
+        print("Please regenerate the CSV file by running: python analysis/extract_exess_data.py")
+        return
+    
     functionals_to_test = ['SVWN5', 'PBE', 'BLYP', 'revPBE', 'BP86', 'BPW91', 'B97-D', 'HCTH407',
                            'TPSS', 'MN15L', 'SCAN', 'rSCAN', 'r2SCAN', 'revTPSS', 't-HCTH', 'M06-L', 'M11-L']
     all_results = []
@@ -378,20 +668,68 @@ def main():
     # MGGA functionals without D4 support
     mgga_no_d4 = ['M11-L', 'MN15L', 't-HCTH']
     
+    # First pass: collect all results without creating plots to calculate global limits
+    print("Collecting data for all functionals...")
     for functional in functionals_to_test:
         if functional == 'SVWN5' or functional == 'HCTH407' or functional in mgga_no_d4:
             # These functionals don't have D4 support, so only test without D4
-            result = process_functional_comparison(df, functional, include_d4=False, output_dir=output_dir,
+            result = process_functional_comparison(df, functional, include_d4=False, output_dir=None,
                                                    reference_method=args.reference_method)
             if result:
                 all_results.append(result)
         else:
             # For other functionals, test both with and without D4
             for include_d4 in [True, False]:
-                result = process_functional_comparison(df, functional, include_d4=include_d4, output_dir=output_dir,
+                result = process_functional_comparison(df, functional, include_d4=include_d4, output_dir=None,
                                                        reference_method=args.reference_method)
                 if result:
                     all_results.append(result)
+    
+    # Process GFN2-xTB comparison
+    xtb_result = process_xtb_comparison(df, output_dir=None, reference_method=args.reference_method)
+    if xtb_result:
+        all_results.append(xtb_result)
+    
+    # Calculate global limits from all collected data
+    if len(all_results) > 0:
+        all_ref_energies = []
+        all_func_energies = []
+        for result in all_results:
+            all_ref_energies.extend(result['ref_energies'].values)
+            all_func_energies.extend(result['func_energies'].values)
+        
+        if all_ref_energies and all_func_energies:
+            global_min = min(min(all_ref_energies), min(all_func_energies))
+            global_max = max(max(all_ref_energies), max(all_func_energies))
+            # Add small padding
+            padding = (global_max - global_min) * 0.05
+            global_min -= padding
+            global_max += padding
+            # Ensure square aspect ratio
+            max_range = max(global_max - global_min, 1.0)
+            center = (global_min + global_max) / 2
+            plot_limits = ((center - max_range/2, center + max_range/2), 
+                          (center - max_range/2, center + max_range/2))
+            print(f"\nGlobal plot limits: x={plot_limits[0]}, y={plot_limits[1]}")
+        else:
+            plot_limits = None
+    else:
+        plot_limits = None
+    
+    # Second pass: create plots with global limits
+    if output_dir and plot_limits:
+        print("\nCreating plots with global scale...")
+        for result in all_results:
+            functional = result['functional']
+            include_d4 = result.get('include_d4')
+            
+            if functional == 'GFN2-xTB':
+                # xTB doesn't create plots here, handled separately
+                continue
+            
+            # Re-run just to create plots with limits (quiet mode to avoid duplicate output)
+            process_functional_comparison(df, functional, include_d4=include_d4, output_dir=output_dir,
+                                        reference_method=args.reference_method, plot_limits=plot_limits, quiet=True)
     
     if len(all_results) == 0:
         print("\nNo results to save.")
@@ -402,14 +740,18 @@ def main():
         f.write("COMPAS-3x Benchmark: Functionals vs revDSD-PBEP86-D4(noFC)\n")
         f.write("="*60 + "\n\n")
         for result in all_results:
-            d4_label = "with D4" if result['include_d4'] else "without D4"
-            f.write(f"\n{result['functional']} ({d4_label})\n")
+            if result['functional'] == 'GFN2-xTB':
+                f.write(f"\n{result['functional']}\n")
+            else:
+                d4_label = "with D4" if result['include_d4'] else "without D4"
+                f.write(f"\n{result['functional']} ({d4_label})\n")
             f.write("-"*60 + "\n")
             f.write(f"Number of matched structures: {result['n_structures']}\n\n")
             f.write("Statistics:\n")
             f.write(f"  MAD: {result['mad_kjmol']:.3f} kJ/mol\n")
+            f.write(f"  MSD: {result['msd_kjmol']:.3f} kJ/mol\n")
             f.write(f"  RMSD: {result['rmsd']:.3f} kJ/mol\n")
-            f.write(f"  R²: {result['r_squared']:.4f}\n")
+            f.write(f"  r²: {result['r_squared']:.4f}\n")
             f.write(f"  MAD as percentage: {result['mad_percentage']:.2f}%\n\n")
             top_indices = result['deviations'].abs().nlargest(10).index
             f.write("Top 10 largest deviations:\n")
@@ -420,8 +762,14 @@ def main():
     # Generate LaTeX table
     latex_path = output_path.with_suffix('.tex')
     generate_latex_table(all_results, latex_path)
+    
+    # Save results to CSV
+    csv_path = output_path.with_suffix('.csv')
+    save_results_to_csv(all_results, csv_path)
+    
     print(f"\nResults saved to {output_path}")
     print(f"LaTeX table saved to {latex_path}")
+    print(f"CSV results saved to {csv_path}")
     print(f"Plots saved to {output_dir}")
 
 

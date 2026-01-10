@@ -167,7 +167,13 @@ def process_batch(
         extracted_data["functional"] = functional
         extracted_data["basis_set"] = basis
         extracted_data["isomer_name"] = exess_batch.isomers[idx].name
-        extracted_data["optimizer"] = exess_batch.isomers[idx].optimizer
+        # Map optimizer labels: xTB -> GFN2-xTB, DFT -> CAM-B3LYP-D3BJ
+        optimizer_raw = exess_batch.isomers[idx].optimizer
+        optimizer_map = {
+            "xTB": "GFN2-xTB",
+            "DFT": "CAM-B3LYP-D3BJ",
+        }
+        extracted_data["optimizer"] = optimizer_map.get(optimizer_raw, optimizer_raw)
         extracted_data["n_carbons"] = exess_batch.isomers[idx].carbons
         extracted_data["n_hydrogens"] = exess_batch.isomers[idx].hydrogens
         extracted_data["id"] = exess_batch.isomers[idx].id
@@ -197,8 +203,15 @@ def main():
     )
     with open(dftd4_results_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
+        has_functional_column = "functional" in reader.fieldnames
         for r in reader:
-            key = (r["system"], r["functional"])
+            # Handle both old format (no functional column) and new format (with functional column)
+            if has_functional_column:
+                functional = r["functional"]
+            else:
+                # Default to revDSD-PBEP86-D4 if functional column is missing
+                functional = "revDSD-PBEP86-D4"
+            key = (r["system"], functional)
             d4_energies[key] = float(r["d4_energy_hartree"])
     print(f"Loaded {len(d4_energies)} D4 energies")
 
@@ -235,32 +248,47 @@ def main():
             rows.extend(batch_rows)
         print(f"Processed {len(rows)} rows sequentially")
 
-    min_energy_by_ch_fb: Dict[Tuple[str, str, int, int], float] = {}
+    # Find minimum energy isomer for each (C, H) group using revDSD-PBEP86-D4
+    # Store the isomer_name that has minimum energy
+    min_isomer_by_ch_revdsd: Dict[Tuple[int, int], str] = {}
+    min_energy_by_ch_revdsd: Dict[Tuple[int, int], float] = {}
     for r in rows:
-        key = (
-            r.get("functional", "revDSD-PBEP86-D4"),
-            r.get("basis_set", "def2-QZVPP"),
-            r["n_carbons"],
-            r["n_hydrogens"],
-        )
+        functional = r.get("functional", "revDSD-PBEP86-D4")
+        if functional != "revDSD-PBEP86-D4":
+            continue
+        key = (r["n_carbons"], r["n_hydrogens"])
         e = r.get("total_energy_hartree")
         if e is None:
             continue
-        if key not in min_energy_by_ch_fb or e < min_energy_by_ch_fb[key]:
-            min_energy_by_ch_fb[key] = e
+        if key not in min_energy_by_ch_revdsd or e < min_energy_by_ch_revdsd[key]:
+            min_energy_by_ch_revdsd[key] = e
+            min_isomer_by_ch_revdsd[key] = r["isomer_name"]
 
-    # Add isomerization energy = total_energy - group_min (per functional/basis/C/H combination)
+    # Build lookup: (functional, basis_set, isomer_name) -> energy
+    energy_lookup: Dict[Tuple[str, str, str], float] = {}
     for r in rows:
-        key = (
-            r.get("functional", "revDSD-PBEP86-D4"),
-            r.get("basis_set", "def2-QZVPP"),
-            r["n_carbons"],
-            r["n_hydrogens"],
-        )
-        min_e = min_energy_by_ch_fb.get(key)
+        key = (r.get("functional", "revDSD-PBEP86-D4"), r.get("basis_set", "def2-QZVPP"), r["isomer_name"])
+        e = r.get("total_energy_hartree")
+        if e is not None:
+            energy_lookup[key] = e
+
+    # Add isomerization energy = total_energy - energy of min_isomer (calculated with same functional/basis)
+    for r in rows:
+        key_ch = (r["n_carbons"], r["n_hydrogens"])
+        min_isomer = min_isomer_by_ch_revdsd.get(key_ch)
+        if min_isomer is None:
+            r["isomerization_energy_hartree"] = None
+            continue
+        
+        # Find the energy of the minimum isomer calculated with the same functional/basis
+        functional = r.get("functional", "revDSD-PBEP86-D4")
+        basis_set = r.get("basis_set", "def2-QZVPP")
+        lookup_key = (functional, basis_set, min_isomer)
+        ref_energy = energy_lookup.get(lookup_key)
+        
         total_e = r.get("total_energy_hartree")
         r["isomerization_energy_hartree"] = (
-            (total_e - min_e) if (min_e is not None and total_e is not None) else None
+            (total_e - ref_energy) if (ref_energy is not None and total_e is not None) else None
         )
 
     field_order = [

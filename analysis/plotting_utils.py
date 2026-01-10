@@ -42,7 +42,7 @@ def extract_common_id(name):
 
 
 def calculate_stats(x, y):
-    """Calculate R², RMSD, and MAD statistics."""
+    """Calculate r², RMSD, and MAD statistics."""
     correlation = np.corrcoef(x, y)[0, 1]
     r_squared = correlation ** 2
     rmsd = np.sqrt(np.mean((x - y) ** 2))
@@ -51,17 +51,17 @@ def calculate_stats(x, y):
     return r_squared, rmsd, mad_percentage
 
 
-def format_axis_offsets(ax):
+def format_axis_offsets(ax, fontsize=8):
     """Move axis offset text to corners."""
     for axis, pos, ha, va in [(ax.xaxis, (0.98, 0.98), 'right', 'top'), (ax.yaxis, (0.02, 0.02), 'left', 'bottom')]:
         offset = axis.get_offset_text()
         if offset.get_text():
             offset.set_visible(False)
             ax.text(pos[0], pos[1], offset.get_text(), transform=ax.transAxes,
-                   horizontalalignment=ha, verticalalignment=va, fontsize=8, color=offset.get_color())
+                   horizontalalignment=ha, verticalalignment=va, fontsize=fontsize, color=offset.get_color())
 
 
-def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None):
+def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None, msd_kjmol=None, figsize=None, xlim=None, ylim=None):
     """Create a standardized scatter plot with statistics.
     
     Args:
@@ -71,47 +71,90 @@ def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None):
         ylabel: y-axis label
         output_path: path to save the plot
         mad_kjmol: Mean Absolute Deviation in kJ/mol (optional, will be calculated if not provided)
+        msd_kjmol: Mean Signed Deviation in kJ/mol (optional, will be calculated if not provided)
+        figsize: tuple of (width, height) in inches (optional, defaults to SINGLE_COLUMN_WIDTH x SINGLE_COLUMN_WIDTH)
+        xlim: tuple of (xmin, xmax) for x-axis limits (optional, auto-calculated if not provided)
+        ylim: tuple of (ymin, ymax) for y-axis limits (optional, auto-calculated if not provided)
     """
     from pathlib import Path
     
-    fig, ax = plt.subplots(figsize=(SINGLE_COLUMN_WIDTH, SINGLE_COLUMN_WIDTH))
-    ax.scatter(x, y, alpha=0.3, s=6, color='#1f77b4', edgecolors='none', linewidth=0)
+    if figsize is None:
+        figsize = (SINGLE_COLUMN_WIDTH, SINGLE_COLUMN_WIDTH)
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Scale sizes proportionally to figure size
+    size_scale = figsize[0] / SINGLE_COLUMN_WIDTH
+    marker_size = max(2, int(6 * size_scale))
+    linewidth_base = 1.0 * size_scale
+    # Font sizes scaled for small plots (slightly increased from previous version)
+    fontsize_label = max(6, int(8 * size_scale))
+    fontsize_legend = max(5, int(7 * size_scale))
+    fontsize_text = max(5, int(7 * size_scale))
+    bbox_linewidth = 0.5 * size_scale
+    
+    ax.scatter(x, y, alpha=0.3, s=marker_size, color='#1f77b4', edgecolors='none', linewidth=0)
     
     min_val, max_val = min(min(x), min(y)), max(max(x), max(y))
-    ax.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, linewidth=1.0, label='Perfect agreement')
+    ax.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, linewidth=linewidth_base, label='Perfect agreement')
     
     if len(x) > 1:
         slope, intercept = np.polyfit(x, y, 1)
         trendline_x = np.array([min_val, max_val])
-        ax.plot(trendline_x, slope * trendline_x + intercept, 'black', alpha=0.8, linewidth=0.9,
+        ax.plot(trendline_x, slope * trendline_x + intercept, 'black', alpha=0.8, linewidth=0.9 * size_scale,
                linestyle='-', label='Linear fit', zorder=10)
     
     r_squared, rmsd, mad_percentage = calculate_stats(x, y)
     if mad_kjmol is None:
         mad_kjmol = np.mean(np.abs(x - y))
+    if msd_kjmol is None:
+        msd_kjmol = np.mean(y - x)
     
-    summary_text = f'$R^2$ = {r_squared:.3f}\nRMSD = {rmsd:.2f} kJ/mol\nMAD = {mad_kjmol:.2f} kJ/mol\nMAD = {mad_percentage:.2f}%'
+    summary_text = f'$r^2$ = {r_squared:.3f}\nRMSD = {rmsd:.2f} kJ/mol\nMAD = {mad_kjmol:.2f} kJ/mol\nMSD = {msd_kjmol:.2f} kJ/mol'
     ax.text(0.98, 0.02, summary_text, transform=ax.transAxes, horizontalalignment='right',
-           verticalalignment='bottom', fontsize=7,
-           bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='black', linewidth=0.5))
+           verticalalignment='bottom', fontsize=fontsize_text,
+           bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='black', linewidth=bbox_linewidth))
     
-    ax.set_xlabel(xlabel, fontsize=8)
-    ax.set_ylabel(ylabel, fontsize=8)
-    ax.legend(fontsize=7, frameon=True, fancybox=False, edgecolor='black', loc='upper left')
-    ax.grid(True, alpha=0.3, linewidth=0.5)
+    ax.set_xlabel(xlabel, fontsize=fontsize_label)
+    ax.set_ylabel(ylabel, fontsize=fontsize_label)
+    ax.legend(fontsize=fontsize_legend, frameon=True, fancybox=False, edgecolor='black', loc='upper left')
+    # Reduce tick label font sizes for small plots
+    ax.tick_params(labelsize=max(5, int(7 * size_scale)))
+    ax.grid(True, alpha=0.3, linewidth=0.5 * size_scale)
     ax.set_aspect('equal', adjustable='box')
     
-    xlim, ylim = ax.get_xlim(), ax.get_ylim()
-    max_range = max(xlim[1] - xlim[0], ylim[1] - ylim[0])
-    xcenter, ycenter = (xlim[0] + xlim[1]) / 2, (ylim[0] + ylim[1]) / 2
-    ax.set_xlim(xcenter - max_range/2, xcenter + max_range/2)
-    ax.set_ylim(ycenter - max_range/2, ycenter + max_range/2)
+    # Use provided limits or calculate from data
+    if xlim is None or ylim is None:
+        # Calculate limits from data
+        data_min = min(min(x), min(y))
+        data_max = max(max(x), max(y))
+        max_range = max(data_max - data_min, 1.0)  # Ensure at least 1.0 range
+        center = (data_min + data_max) / 2
+        if xlim is None:
+            xlim = (center - max_range/2, center + max_range/2)
+        if ylim is None:
+            ylim = (center - max_range/2, center + max_range/2)
     
-    plt.tight_layout()
-    format_axis_offsets(ax)
+    # Ensure x and y have the same range for equal aspect
+    x_range = xlim[1] - xlim[0]
+    y_range = ylim[1] - ylim[0]
+    max_range = max(x_range, y_range)
+    x_center = (xlim[0] + xlim[1]) / 2
+    y_center = (ylim[0] + ylim[1]) / 2
+    ax.set_xlim(x_center - max_range/2, x_center + max_range/2)
+    ax.set_ylim(y_center - max_range/2, y_center + max_range/2)
+    
+    # Reduce padding more aggressively for small plots
+    if size_scale < 0.6:  # Small plots
+        # Reduce margins around plot area - use subplots_adjust instead of tight_layout
+        plt.subplots_adjust(left=0.18, bottom=0.18, right=0.98, top=0.98)
+        pad_inches = 0.02
+    else:
+        plt.tight_layout()
+        pad_inches = 0.1
+    format_axis_offsets(ax, fontsize=max(5, int(8 * size_scale)))
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight', pad_inches=pad_inches)
     print(f"Saved: {output_path}")
     plt.close()
 
