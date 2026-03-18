@@ -92,35 +92,67 @@ def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None, msd_k
     fontsize_legend = max(5, int(7 * size_scale))
     fontsize_text = max(5, int(7 * size_scale))
     bbox_linewidth = 0.5 * size_scale
+
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y)
+    abs_errors = np.abs(y_arr - x_arr)
+    max_err_idx = int(np.argmax(abs_errors))
+    max_err_x = float(x_arr[max_err_idx])
+    max_err_y = float(y_arr[max_err_idx])
+    max_err_val = float(abs_errors[max_err_idx])
     
-    ax.scatter(x, y, alpha=0.3, s=marker_size, color='#1f77b4', edgecolors='none', linewidth=0)
+    ax.scatter(x_arr, y_arr, alpha=0.3, s=marker_size, color='#1f77b4', edgecolors='none', linewidth=0)
+    ax.scatter([max_err_x], [max_err_y], s=marker_size * 2.2, color='#d62728',
+               edgecolors='none', linewidth=0, zorder=6)
     
-    min_val, max_val = min(min(x), min(y)), max(max(x), max(y))
+    min_val, max_val = min(float(x_arr.min()), float(y_arr.min())), max(float(x_arr.max()), float(y_arr.max()))
     ax.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, linewidth=linewidth_base, label='Perfect agreement')
     
-    if show_linear_fits and len(x) > 1:
+    if show_linear_fits and len(x_arr) > 1:
         # x->y fit: y = slope_xy * x + intercept_xy
-        slope_xy, intercept_xy = np.polyfit(x, y, 1)
+        slope_xy, intercept_xy = np.polyfit(x_arr, y_arr, 1)
         trendline_x = np.array([min_val, max_val])
         ax.plot(trendline_x, slope_xy * trendline_x + intercept_xy, 'black', alpha=0.8, linewidth=0.9 * size_scale,
                linestyle='-', label='Linear fit (x→y)', zorder=10)
         
         # y->x fit: x = slope_yx * y + intercept_yx, so y = (x - intercept_yx) / slope_yx
-        slope_yx, intercept_yx = np.polyfit(y, x, 1)
+        slope_yx, intercept_yx = np.polyfit(y_arr, x_arr, 1)
         # Invert to plot: y = (x - intercept_yx) / slope_yx
         ax.plot(trendline_x, (trendline_x - intercept_yx) / slope_yx, 'gray', alpha=0.8, linewidth=0.9 * size_scale,
                linestyle='--', label='Linear fit (y→x)', zorder=10)
     
-    r_squared, rmsd, mad_percentage = calculate_stats(x, y)
+    r_squared, rmsd, mad_percentage = calculate_stats(x_arr, y_arr)
     if mad_kjmol is None:
-        mad_kjmol = np.mean(np.abs(x - y))
+        mad_kjmol = np.mean(np.abs(x_arr - y_arr))
     if msd_kjmol is None:
-        msd_kjmol = np.mean(y - x)
+        msd_kjmol = np.mean(y_arr - x_arr)
     
-    summary_text = f'$r^2$ = {r_squared:.3f}\nRMSD = {rmsd:.2f} kJ/mol\nMAD = {mad_kjmol:.2f} kJ/mol\nMSD = {msd_kjmol:.2f} kJ/mol'
+    summary_text = (
+        f'$r^2$ = {r_squared:.3f}\n'
+        f'RMSD = {rmsd:.2f} kJ/mol\n'
+        f'MAD = {mad_kjmol:.2f} kJ/mol\n'
+        f'MSD = {msd_kjmol:.2f} kJ/mol\n'
+        f'Max = {max_err_val:.2f} kJ/mol'
+    )
     ax.text(0.98, 0.02, summary_text, transform=ax.transAxes, horizontalalignment='right',
            verticalalignment='bottom', fontsize=fontsize_text,
            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='black', linewidth=bbox_linewidth))
+
+    # Annotate the maximum-error point (keep lightweight for small plots)
+    dx = 8 if size_scale >= 0.6 else 4
+    dy = 8 if size_scale >= 0.6 else 4
+    ax.annotate(
+        f'Max |Δ| = {max_err_val:.1f}',
+        xy=(max_err_x, max_err_y),
+        xytext=(dx, dy),
+        textcoords='offset points',
+        fontsize=max(5, int(6 * size_scale)),
+        color='#d62728',
+        ha='left',
+        va='bottom',
+        arrowprops=dict(arrowstyle='-', color='#d62728', linewidth=0.7 * size_scale, alpha=0.8),
+        zorder=7,
+    )
     
     # Adjust label padding based on figure size (smaller padding for small plots)
     labelpad = max(2, int(4 * size_scale)) if size_scale < 0.6 else 4
