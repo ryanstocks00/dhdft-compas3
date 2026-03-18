@@ -226,7 +226,7 @@ def plot_comparison(df, output_path, plot_type='timings', basis_to_carbon=None):
                 # Energy = power × time, so relative energy = relative_power / speedup
                 # Invert to show energy efficiency (higher is better)
                 relative_energy_inv = max_speedup / relative_power
-                power_label = f'{max_speedup:.1f}$\\times$ time\n({relative_energy_inv:.2f}$\\times$ energy)'
+                power_label = f'{max_speedup:.0f}$\\times$ time\n({relative_energy_inv:.0f}$\\times$ energy)'
                 
                 # Position label at middle of bar, accounting for log scale if needed
                 mid_y = (y_orca + y_gpu) / 2

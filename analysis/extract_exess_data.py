@@ -36,7 +36,6 @@ def parse_qmmbe_json(path: Path, d4_energy) -> Dict[str, Any]:
     dhdft_total_energy = scf_energy + pt2_os_energy + pt2_ss_energy + d4_energy_value
 
     row = {
-        "filename": path.name,
         "total_energy_hartree": dhdft_total_energy,
         "scf_energy_hartree": scf_energy,
         "pt2_os_correction_hartree": (pt2_os_raw if pt2_os_raw is not None else None),
@@ -162,8 +161,6 @@ def process_batch(
                 f"Warning: No D4 energy found for {exess_batch.isomers[idx].name} with functional {functional}"
             )
         extracted_data = parse_qmmbe_json(matched, d4_energy)
-        extracted_data["topology_index"] = idx
-        extracted_data["batch_name"] = batch_name
         extracted_data["functional"] = functional
         extracted_data["basis_set"] = basis
         extracted_data["isomer_name"] = exess_batch.isomers[idx].name
@@ -190,6 +187,10 @@ def main():
     ap.add_argument(
         "-j", "--jobs", type=int, default=None,
         help="Number of parallel jobs (default: number of CPU cores)"
+    )
+    ap.add_argument(
+        "--include-pah335", action="store_true",
+        help="Include PAH335 (G4(MP2)) results (excluded by default)"
     )
     args = ap.parse_args()
 
@@ -221,9 +222,16 @@ def main():
 
     # Collect all batches
     all_batches = []
-    all_batches.extend(common.exess_pah335_batches)
+    # Include PAH335 (G4(MP2)) batches only if explicitly requested
+    if args.include_pah335:
+        all_batches.extend(common.exess_pah335_batches)
+        all_batches.extend(common.exess_pah335_pbe_batches)
+        print("Including PAH335 (G4(MP2)) batches")
+    else:
+        print("Excluding PAH335 (G4(MP2)) batches (use --include-pah335 to include)")
+    
+    # Always include COMPAS batches
     all_batches.extend(common.exess_batches)
-    all_batches.extend(common.exess_pah335_pbe_batches)
     all_batches.extend(common.exess_svwn_batches)
     all_batches.extend(common.exess_gga_batches)
     all_batches.extend(common.exess_mgga_batches)
@@ -296,10 +304,7 @@ def main():
         "optimizer",
         "functional",
         "basis_set",
-        "batch_name",
-        "topology_index",
         "id",
-        "filename",
         "total_energy_hartree",
         "isomerization_energy_hartree",
         "scf_energy_hartree",

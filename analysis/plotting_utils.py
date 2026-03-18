@@ -61,7 +61,7 @@ def format_axis_offsets(ax, fontsize=8):
                    horizontalalignment=ha, verticalalignment=va, fontsize=fontsize, color=offset.get_color())
 
 
-def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None, msd_kjmol=None, figsize=None, xlim=None, ylim=None):
+def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None, msd_kjmol=None, figsize=None, xlim=None, ylim=None, show_linear_fits=False):
     """Create a standardized scatter plot with statistics.
     
     Args:
@@ -75,6 +75,7 @@ def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None, msd_k
         figsize: tuple of (width, height) in inches (optional, defaults to SINGLE_COLUMN_WIDTH x SINGLE_COLUMN_WIDTH)
         xlim: tuple of (xmin, xmax) for x-axis limits (optional, auto-calculated if not provided)
         ylim: tuple of (ymin, ymax) for y-axis limits (optional, auto-calculated if not provided)
+        show_linear_fits: whether to show linear fit lines (default: False)
     """
     from pathlib import Path
     
@@ -97,11 +98,18 @@ def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None, msd_k
     min_val, max_val = min(min(x), min(y)), max(max(x), max(y))
     ax.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, linewidth=linewidth_base, label='Perfect agreement')
     
-    if len(x) > 1:
-        slope, intercept = np.polyfit(x, y, 1)
+    if show_linear_fits and len(x) > 1:
+        # x->y fit: y = slope_xy * x + intercept_xy
+        slope_xy, intercept_xy = np.polyfit(x, y, 1)
         trendline_x = np.array([min_val, max_val])
-        ax.plot(trendline_x, slope * trendline_x + intercept, 'black', alpha=0.8, linewidth=0.9 * size_scale,
-               linestyle='-', label='Linear fit', zorder=10)
+        ax.plot(trendline_x, slope_xy * trendline_x + intercept_xy, 'black', alpha=0.8, linewidth=0.9 * size_scale,
+               linestyle='-', label='Linear fit (x→y)', zorder=10)
+        
+        # y->x fit: x = slope_yx * y + intercept_yx, so y = (x - intercept_yx) / slope_yx
+        slope_yx, intercept_yx = np.polyfit(y, x, 1)
+        # Invert to plot: y = (x - intercept_yx) / slope_yx
+        ax.plot(trendline_x, (trendline_x - intercept_yx) / slope_yx, 'gray', alpha=0.8, linewidth=0.9 * size_scale,
+               linestyle='--', label='Linear fit (y→x)', zorder=10)
     
     r_squared, rmsd, mad_percentage = calculate_stats(x, y)
     if mad_kjmol is None:
@@ -114,8 +122,10 @@ def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None, msd_k
            verticalalignment='bottom', fontsize=fontsize_text,
            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='black', linewidth=bbox_linewidth))
     
-    ax.set_xlabel(xlabel, fontsize=fontsize_label)
-    ax.set_ylabel(ylabel, fontsize=fontsize_label)
+    # Adjust label padding based on figure size (smaller padding for small plots)
+    labelpad = max(2, int(4 * size_scale)) if size_scale < 0.6 else 4
+    ax.set_xlabel(xlabel, fontsize=fontsize_label, labelpad=labelpad)
+    ax.set_ylabel(ylabel, fontsize=fontsize_label, labelpad=labelpad)
     ax.legend(fontsize=fontsize_legend, frameon=True, fancybox=False, edgecolor='black', loc='upper left')
     # Reduce tick label font sizes for small plots
     ax.tick_params(labelsize=max(5, int(7 * size_scale)))

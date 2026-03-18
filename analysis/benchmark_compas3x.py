@@ -99,7 +99,7 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
     # Filter to COMPAS-3x geometries
     compas3x_df = df[
         (df['isomer_name'].str.contains('compas3x', case=False, na=False)) &
-        (df['optimizer'] == 'xTB')
+        (df['optimizer'] == 'GFN2-xTB')
     ].copy()
     compas3x_df['common_id'] = compas3x_df['isomer_name'].apply(extract_common_id)
     compas3x_df = compas3x_df.dropna(subset=['common_id'])
@@ -147,16 +147,24 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
     func_energies_kjmol = merged['isomerization_energy_func'] * HARTREE_TO_KJ_PER_MOL
     ref_energies_kjmol = merged['isomerization_energy_ref'] * HARTREE_TO_KJ_PER_MOL
     
+    # Calculate original deviations before linear fit correction
+    original_deviations = func_energies_kjmol - ref_energies_kjmol
+    original_mad_kjmol = np.mean(np.abs(original_deviations))
+    original_msd_kjmol = np.mean(original_deviations)
+    
+    # Save original energies for small plots (before linear fit correction)
+    original_func_energies_kjmol = func_energies_kjmol.copy()
+    
     # Apply linear fit correction if requested
     gradient = None
     offset = None
     if reference_method == 'linear_fit':
-        # Fit: func = gradient * ref + offset
-        slope, intercept, r_value, p_value, std_err = linregress(ref_energies_kjmol, func_energies_kjmol)
+        # Fit: ref = gradient * func + offset (fit reference as function of functional, y->x fit)
+        slope, intercept, r_value, p_value, std_err = linregress(func_energies_kjmol, ref_energies_kjmol)
         gradient = slope
         offset = intercept
-        # Correct: func_corrected = (func - offset) / gradient
-        func_energies_kjmol = (func_energies_kjmol - offset) / gradient
+        # Correct: func_corrected = func * gradient + offset
+        func_energies_kjmol = func_energies_kjmol * gradient + offset
     
     deviations = func_energies_kjmol - ref_energies_kjmol
     
@@ -217,23 +225,34 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
         # Format functional names for display
         func_display = format_functional_name(functional)
         ref_display = format_functional_name(reference_functional)
+        # Format y-axis label: add "-D4" suffix when D4 is included, otherwise just the functional name
+        ylabel_func = f'{func_display}-D4' if include_d4 else func_display
         # Create regular-sized plot
         xlim = plot_limits[0] if plot_limits else None
         ylim = plot_limits[1] if plot_limits else None
         create_scatter_plot(
             ref_energies_kjmol, func_energies_kjmol,
             rf'{ref_display} $\Delta E$ (kJ/mol)',
-            rf'{func_display} ({d4_label}) $\Delta E$ (kJ/mol)',
+            rf'{ylabel_func} $\Delta E$ (kJ/mol)',
             plot_path, mad_kjmol=mad_kjmol, msd_kjmol=msd_kjmol, xlim=xlim, ylim=ylim
         )
         if not quiet:
             print(f"\nPlot saved to: {plot_path}")
         # Create small version for two-across single column layout
+        # Use original (uncorrected) energies for small plots
+        if reference_method == 'linear_fit':
+            small_func_energies = original_func_energies_kjmol
+            small_mad = original_mad_kjmol
+            small_msd = original_msd_kjmol
+        else:
+            small_func_energies = func_energies_kjmol
+            small_mad = mad_kjmol
+            small_msd = msd_kjmol
         create_scatter_plot(
-            ref_energies_kjmol, func_energies_kjmol,
+            ref_energies_kjmol, small_func_energies,
             rf'{ref_display} $\Delta E$ (kJ/mol)',
-            rf'{func_display} ({d4_label}) $\Delta E$ (kJ/mol)',
-            plot_path_small, mad_kjmol=mad_kjmol, msd_kjmol=msd_kjmol, figsize=(1.65, 1.65), xlim=xlim, ylim=ylim
+            rf'{ylabel_func} $\Delta E$ (kJ/mol)',
+            plot_path_small, mad_kjmol=small_mad, msd_kjmol=small_msd, figsize=(1.65, 1.65), xlim=xlim, ylim=ylim, show_linear_fits=False
         )
         if not quiet:
             print(f"Small plot saved to: {plot_path_small}")
@@ -241,6 +260,7 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
     return {
         'functional': functional, 'include_d4': include_d4, 'n_structures': len(merged),
         'mad_kjmol': mad_kjmol, 'msd_kjmol': msd_kjmol, 'rmsd': rmsd, 'r_squared': r_squared, 'mad_percentage': mad_percentage,
+        'original_mad_kjmol': original_mad_kjmol if reference_method == 'linear_fit' else mad_kjmol,
         'n_negative_isomer_energies': n_negative_isomer_energies,
         'n_overestimated': n_overestimated, 'n_underestimated': n_underestimated,
         'n_overestimates_over_100': n_overestimates_over_100,
@@ -255,7 +275,7 @@ def process_xtb_comparison(df, reference_functional='revDSD-PBEP86-D4', output_d
     # Filter to COMPAS-3x geometries
     compas3x_df = df[
         (df['isomer_name'].str.contains('compas3x', case=False, na=False)) &
-        (df['optimizer'] == 'xTB')
+        (df['optimizer'] == 'GFN2-xTB')
     ].copy()
     compas3x_df['common_id'] = compas3x_df['isomer_name'].apply(extract_common_id)
     compas3x_df = compas3x_df.dropna(subset=['common_id'])
@@ -354,12 +374,12 @@ def process_xtb_comparison(df, reference_functional='revDSD-PBEP86-D4', output_d
     gradient = None
     offset = None
     if reference_method == 'linear_fit':
-        # Fit: xtb = gradient * ref + offset
-        slope, intercept, r_value, p_value, std_err = linregress(ref_energies_kjmol, xtb_energies_kjmol)
+        # Fit: ref = gradient * xtb + offset (fit reference as function of xTB, y->x fit)
+        slope, intercept, r_value, p_value, std_err = linregress(xtb_energies_kjmol, ref_energies_kjmol)
         gradient = slope
         offset = intercept
-        # Correct: xtb_corrected = (xtb - offset) / gradient
-        xtb_energies_kjmol = (xtb_energies_kjmol - offset) / gradient
+        # Correct: xtb_corrected = xtb * gradient + offset
+        xtb_energies_kjmol = xtb_energies_kjmol * gradient + offset
     
     deviations = xtb_energies_kjmol - ref_energies_kjmol
     
@@ -433,6 +453,7 @@ def generate_latex_table(results, output_path):
             # xTB doesn't have with/without D4 variants
             xtb_data = {
                 'mad': result['mad_kjmol'], 'msd': result['msd_kjmol'], 'r_squared': result['r_squared'],
+                'original_mad': result.get('original_mad_kjmol', result['mad_kjmol']),
                 'gradient': result.get('gradient'), 'offset': result.get('offset')
             }
         else:
@@ -441,6 +462,7 @@ def generate_latex_table(results, output_path):
             key = 'with_d4' if result['include_d4'] else 'without_d4'
             func_data[func][key] = {
                 'mad': result['mad_kjmol'], 'msd': result['msd_kjmol'], 'r_squared': result['r_squared'],
+                'original_mad': result.get('original_mad_kjmol', result['mad_kjmol']),
                 'gradient': result.get('gradient'), 'offset': result.get('offset')
             }
     
@@ -472,7 +494,7 @@ def generate_latex_table(results, output_path):
     # Write LaTeX table
     with open(output_path, 'w') as f:
         f.write("% Requires: \\usepackage{booktabs, multirow, rotating, graphicx}\n")
-        f.write("\\begin{table}[h]\n\\centering\n")
+        f.write("\\begin{table}[H]\n\\centering\n")
         # Check if we have linear fit data (gradient/offset)
         has_linear_fit = any(
             d.get('with_d4', {}).get('gradient') is not None or 
@@ -481,17 +503,17 @@ def generate_latex_table(results, output_path):
         )
         
         if has_linear_fit:
-            f.write("\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{}}\n")
-            f.write("\\toprule\n")
-            f.write(" & \\multirow{3}{*}{\\textbf{Functional}} & \\multicolumn{4}{c}{\\textbf{Without D4}} & \\multicolumn{4}{c}{\\textbf{With D4}} \\\\\n")
-            f.write("\\cmidrule(lr){3-6} \\cmidrule(lr){7-10}\n")
-            f.write(" & & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{\\textbf{r²}\\vspace{0.5em}} & \\shortstack{\\textbf{Gradient/}\\\\\\textbf{Offset}} & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{\\textbf{r²}\\vspace{0.5em}} & \\shortstack{\\textbf{Gradient/}\\\\\\textbf{Offset}} \\\\\n")
-        else:
-            f.write("\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{}}\n")
+            f.write("\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{\\hspace{0.3em}}c@{}}\n")
             f.write("\\toprule\n")
             f.write(" & \\multirow{3}{*}{\\textbf{Functional}} & \\multicolumn{3}{c}{\\textbf{Without D4}} & \\multicolumn{3}{c}{\\textbf{With D4}} \\\\\n")
             f.write("\\cmidrule(lr){3-5} \\cmidrule(lr){6-8}\n")
-            f.write(" & & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{\\textbf{r²}\\vspace{0.5em}} & \\shortstack{\\textbf{MAD}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{\\textbf{r²}\\vspace{0.5em}} \\\\\n")
+            f.write(" & & \\shortstack{\\textbf{Slope}} & \\shortstack{\\textbf{Offset}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MAD}\\\\ \\textbf{(corrected)}\\\\ \\textbf{(kJ/mol)}} & \\shortstack{\\textbf{Slope}} & \\shortstack{\\textbf{Offset}\\\\\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MAD}\\\\ \\textbf{(corrected)}\\\\ \\textbf{(kJ/mol)}} \\\\\n")
+        else:
+            f.write("\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.25em}}c@{\\hspace{0.25em}}c@{\\hspace{0.25em}}c@{\\hspace{0.25em}}c@{\\hspace{0.25em}}c@{\\hspace{0.25em}}c@{}}\n")
+            f.write("\\toprule\n")
+            f.write(" & \\multirow{3}{*}{\\textbf{Functional}} & \\multicolumn{3}{c}{\\textbf{Without D4}} & \\multicolumn{3}{c}{\\textbf{With D4}} \\\\\n")
+            f.write("\\cmidrule(lr){3-5} \\cmidrule(lr){6-8}\n")
+            f.write(" & & \\shortstack{\\textbf{MAD}\\\\\\footnotesize\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\footnotesize\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{$\\boldsymbol{r^2}$\\vspace{0.5em}} & \\shortstack{\\textbf{MAD}\\\\\\footnotesize\\textbf{(kJ/mol)}} & \\shortstack{\\textbf{MSD}\\\\\\footnotesize\\textbf{(kJ/mol)}} & \\parbox[t]{2em}{$\\boldsymbol{r^2}$\\vspace{0.5em}} \\\\\n")
         f.write("\\midrule\n")
         
         # Define formatting functions
@@ -504,10 +526,22 @@ def generate_latex_table(results, output_path):
                 return f"\\textbf{{{fmt}}}"
             return fmt
         
-        def format_fit_params(gradient, offset):
-            if gradient is None or offset is None:
+        def format_gradient(grad):
+            if grad is None:
                 return "---"
-            return f"{gradient:.3f}/{offset:.2f}"
+            return f"{grad:.3f}"
+        
+        def format_offset(off):
+            if off is None:
+                return "---"
+            sign = "$-$" if off < 0 else "$+$"
+            return f"{sign}{abs(off):.2f}"
+        
+        def format_msd(msd):
+            if msd is None:
+                return "---"
+            sign = "$-$" if msd < 0 else "$+$"
+            return f"{sign}{abs(msd):.2f}"
         
         # Add GFN2-xTB row at the top if present
         if xtb_data is not None:
@@ -517,14 +551,15 @@ def generate_latex_table(results, output_path):
             xtb_gradient = xtb_data.get('gradient')
             xtb_offset = xtb_data.get('offset')
             
-            xtb_mad_str = format_value(xtb_mad, best_mad)
-            xtb_msd_str = format_value(xtb_msd, None)  # MSD doesn't have a "best" value
-            xtb_r2_str = format_value(xtb_r2, best_r2, True)
-            xtb_fit = format_fit_params(xtb_gradient, xtb_offset)
-            
             if has_linear_fit:
-                f.write(f" & GFN2--xTB & --- & --- & --- & --- & {xtb_mad_str} & {xtb_msd_str} & {xtb_r2_str} & {xtb_fit} \\\\\n")
+                xtb_grad_str = format_gradient(xtb_gradient) if xtb_gradient is not None else "---"
+                xtb_off_str = format_offset(xtb_offset) if xtb_offset is not None else "---"
+                xtb_corrected_mad_str = format_value(xtb_mad, None)
+                f.write(f" & GFN2--xTB & --- & --- & --- & {xtb_grad_str} & {xtb_off_str} & {xtb_corrected_mad_str} \\\\\n")
             else:
+                xtb_mad_str = format_value(xtb_mad, best_mad)
+                xtb_msd_str = format_msd(xtb_msd)
+                xtb_r2_str = format_value(xtb_r2, best_r2, True)
                 f.write(f" & GFN2--xTB & --- & --- & --- & {xtb_mad_str} & {xtb_msd_str} & {xtb_r2_str} \\\\\n")
             f.write("\\midrule\n")
         
@@ -564,28 +599,33 @@ def generate_latex_table(results, output_path):
             else:
                 func_display = func.replace('-', '--')
             
-            without_d4_str = format_value(data.get('without_d4', {}).get('mad'), best_mad)
-            without_d4_msd_str = format_value(data.get('without_d4', {}).get('msd'), None)  # MSD doesn't have a "best" value
-            without_d4_r2_str = format_value(data.get('without_d4', {}).get('r_squared'), best_r2, True)
-            with_d4_str = format_value(data.get('with_d4', {}).get('mad'), best_mad)
-            with_d4_msd_str = format_value(data.get('with_d4', {}).get('msd'), None)  # MSD doesn't have a "best" value
-            with_d4_r2_str = format_value(data.get('with_d4', {}).get('r_squared'), best_r2, True)
-            
-            # Format gradient and offset if available
-            without_d4_fit = format_fit_params(
-                data.get('without_d4', {}).get('gradient'),
-                data.get('without_d4', {}).get('offset')
-            )
-            with_d4_fit = format_fit_params(
-                data.get('with_d4', {}).get('gradient'),
-                data.get('with_d4', {}).get('offset')
-            )
+            if has_linear_fit:
+                without_d4_gradient = data.get('without_d4', {}).get('gradient')
+                without_d4_offset = data.get('without_d4', {}).get('offset')
+                without_d4_corrected_mad = data.get('without_d4', {}).get('mad') if without_d4_gradient is not None else None
+                without_d4_grad_str = format_gradient(without_d4_gradient)
+                without_d4_off_str = format_offset(without_d4_offset)
+                without_d4_corrected_str = format_value(without_d4_corrected_mad, None)
+                
+                with_d4_gradient = data.get('with_d4', {}).get('gradient')
+                with_d4_offset = data.get('with_d4', {}).get('offset')
+                with_d4_corrected_mad = data.get('with_d4', {}).get('mad') if with_d4_gradient is not None else None
+                with_d4_grad_str = format_gradient(with_d4_gradient)
+                with_d4_off_str = format_offset(with_d4_offset)
+                with_d4_corrected_str = format_value(with_d4_corrected_mad, None)
+            else:
+                without_d4_str = format_value(data.get('without_d4', {}).get('mad'), best_mad)
+                without_d4_msd_str = format_msd(data.get('without_d4', {}).get('msd'))
+                without_d4_r2_str = format_value(data.get('without_d4', {}).get('r_squared'), best_r2, True)
+                with_d4_str = format_value(data.get('with_d4', {}).get('mad'), best_mad)
+                with_d4_msd_str = format_msd(data.get('with_d4', {}).get('msd'))
+                with_d4_r2_str = format_value(data.get('with_d4', {}).get('r_squared'), best_r2, True)
             
             if has_linear_fit:
                 if is_first_in_category and category_counts.get(category, 0) == 1:
-                    f.write(f" & \\raisebox{{-0.5\\height}}{{{func_display}}} & \\raisebox{{-0.5\\height}}{{{without_d4_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_msd_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_fit}}} & \\raisebox{{-0.5\\height}}{{{with_d4_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_msd_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_fit}}} \\\\[2ex]\n")
+                    f.write(f" & \\raisebox{{-0.5\\height}}{{{func_display}}} & \\raisebox{{-0.5\\height}}{{{without_d4_grad_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_off_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_corrected_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_grad_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_off_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_corrected_str}}} \\\\[2ex]\n")
                 else:
-                    f.write(f" & {func_display} & {without_d4_str} & {without_d4_msd_str} & {without_d4_r2_str} & {without_d4_fit} & {with_d4_str} & {with_d4_msd_str} & {with_d4_r2_str} & {with_d4_fit} \\\\\n")
+                    f.write(f" & {func_display} & {without_d4_grad_str} & {without_d4_off_str} & {without_d4_corrected_str} & {with_d4_grad_str} & {with_d4_off_str} & {with_d4_corrected_str} \\\\\n")
             else:
                 if is_first_in_category and category_counts.get(category, 0) == 1:
                     f.write(f" & \\raisebox{{-0.5\\height}}{{{func_display}}} & \\raisebox{{-0.5\\height}}{{{without_d4_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_msd_str}}} & \\raisebox{{-0.5\\height}}{{{without_d4_r2_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_msd_str}}} & \\raisebox{{-0.5\\height}}{{{with_d4_r2_str}}} \\\\[2ex]\n")
@@ -593,7 +633,10 @@ def generate_latex_table(results, output_path):
                     f.write(f" & {func_display} & {without_d4_str} & {without_d4_msd_str} & {without_d4_r2_str} & {with_d4_str} & {with_d4_msd_str} & {with_d4_r2_str} \\\\\n")
         
         f.write("\\bottomrule\n\\end{tabular}\n")
-        caption = "Mean Absolute Deviation (MAD), Mean Signed Deviation (MSD), and coefficient of determination (r²) of isomerization energies for COMPAS-3x geometries relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP. All DFT calculations performed with (99,590) grid and def2-TZVP basis set. GFN2-xTB results are from semiempirical calculations. Best values across all methods are highlighted in bold."
+        if has_linear_fit:
+            caption = "Mean Absolute Deviation (MAD) and coefficient of determination (r²) of isomerization energies for COMPAS-3x geometries relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP. All DFT calculations performed with (99,590) grid and def2-TZVP basis set. Linear fit correction has been applied, which sets the mean signed deviation (MSD) to zero. GFN2-xTB results are from semiempirical calculations. Best values across all methods are highlighted in bold."
+        else:
+            caption = "Mean Absolute Deviation (MAD), Mean Signed Deviation (MSD), and coefficient of determination (r²) of isomerization energies for COMPAS-3x geometries relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP. All DFT calculations performed with (99,590) grid and def2-TZVP basis set. GFN2-xTB results are from semiempirical calculations. Best values across all methods are highlighted in bold."
         f.write(f"\\caption{{{caption}}}\n")
         f.write("\\label{tab:compas3x_benchmarks}\n\\end{table}\n")
 

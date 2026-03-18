@@ -12,177 +12,269 @@ import numpy as np
 # Add analysis directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 from plotting_utils import (
-    create_scatter_plot, extract_common_id, calculate_stats, HARTREE_TO_KJ_PER_MOL
+    create_scatter_plot,
+    extract_common_id,
+    calculate_stats,
+    HARTREE_TO_KJ_PER_MOL,
 )
 
 # Functional categories
-LDA_FUNCTIONALS = ['SVWN5']
-GGA_FUNCTIONALS = ['PBE', 'BLYP', 'revPBE', 'BP86', 'BPW91', 'B97-D', 'HCTH407']
-MGGA_FUNCTIONALS = ['TPSS', 'MN15L', 'SCAN', 'rSCAN', 'r2SCAN', 'revTPSS', 't-HCTH', 'M06-L', 'M11-L']
+LDA_FUNCTIONALS = ["SVWN5"]
+GGA_FUNCTIONALS = ["PBE", "BLYP", "revPBE", "BP86", "BPW91", "B97-D", "HCTH407"]
+MGGA_FUNCTIONALS = [
+    "TPSS",
+    "MN15L",
+    "SCAN",
+    "rSCAN",
+    "r2SCAN",
+    "revTPSS",
+    "t-HCTH",
+    "M06-L",
+    "M11-L",
+]
 
 # Functionals without D4 support
-NO_D4_FUNCTIONALS = ['SVWN5', 'HCTH407', 'M11-L', 'MN15L', 't-HCTH']
+NO_D4_FUNCTIONALS = ["SVWN5", "HCTH407", "M11-L", "MN15L", "t-HCTH"]
 
 
 def format_functional_name(func):
     """Convert functional name to LaTeX-safe format."""
-    return func.replace('-', '_').replace('(', '').replace(')', '').replace('/', '_')
+    return func.replace("-", "_").replace("(", "").replace(")", "").replace("/", "_")
 
 
 def generate_xtb_comparison_plot(exess_csv, plots_dir):
     """Generate GFN2-xTB vs revDSD-PBEP86-D4 comparison plot."""
     print("Generating GFN2-xTB comparison plot...")
-    
+
     # Load EXESS data
     exess_df = pd.read_csv(exess_csv)
-    exess_df['common_id'] = exess_df['isomer_name'].apply(extract_common_id)
-    
-    # Filter to COMPAS-3x geometries with xTB optimizer
+    exess_df["common_id"] = exess_df["isomer_name"].apply(extract_common_id)
+
+    # Filter to COMPAS-3x geometries with GFN2-xTB optimizer
     compas3x_df = exess_df[
-        (exess_df['isomer_name'].str.contains('compas3x', case=False, na=False)) &
-        (exess_df['optimizer'] == 'xTB')
+        (exess_df["isomer_name"].str.contains("compas3x", case=False, na=False))
+        & (exess_df["optimizer"] == "GFN2-xTB")
     ].copy()
-    
+
     # Get revDSD-PBEP86-D4 data
-    revdsd_df = compas3x_df[compas3x_df['functional'] == 'revDSD-PBEP86-D4'].copy()
-    
+    revdsd_df = compas3x_df[compas3x_df["functional"] == "revDSD-PBEP86-D4"].copy()
+
     if len(revdsd_df) == 0:
         print("Warning: No revDSD-PBEP86-D4 data found for COMPAS-3x")
         return False
-    
+
     # Find minimum energy isomer for each (C, H) group using revDSD-PBEP86-D4
     revdsd_min_isomers = {}
-    for (n_c, n_h), group in revdsd_df.groupby(['n_carbons', 'n_hydrogens']):
-        min_idx = group['total_energy_hartree'].idxmin()
-        min_common_id = group.loc[min_idx, 'common_id']
+    for (n_c, n_h), group in revdsd_df.groupby(["n_carbons", "n_hydrogens"]):
+        min_idx = group["total_energy_hartree"].idxmin()
+        min_common_id = group.loc[min_idx, "common_id"]
         revdsd_min_isomers[(n_c, n_h)] = min_common_id
-    
+
     # Load COMPAS-3x data for xTB energies from local cache
     try:
         script_dir = Path(__file__).parent
         project_root = script_dir.parent
-        compas3x_path = project_root / '.compas_cache' / 'compas' / 'COMPAS-3' / 'compas-3x.csv'
-        
+        compas3x_path = (
+            project_root / ".compas_cache" / "compas" / "COMPAS-3" / "compas-3x.csv"
+        )
+
         if not compas3x_path.exists():
             print(f"Warning: COMPAS-3x CSV not found at {compas3x_path}")
             return False
-        
+
         compas3x_data = pd.read_csv(compas3x_path)
-        
+
         # Extract common_id from molecule column
-        if 'molecule' not in compas3x_data.columns:
+        if "molecule" not in compas3x_data.columns:
             print("Warning: 'molecule' column not found in COMPAS-3x data")
             return False
-        
-        compas3x_data['common_id'] = compas3x_data['molecule'].apply(extract_common_id)
-        
+
+        compas3x_data["common_id"] = compas3x_data["molecule"].apply(extract_common_id)
+
         # Extract n_carbons and n_hydrogens from common_id (format: c16h10_0pent_1)
         def extract_carbons_hydrogens(common_id):
-            match = re.match(r'c(\d+)h(\d+)', common_id)
+            match = re.match(r"c(\d+)h(\d+)", common_id)
             if match:
                 return int(match.group(1)), int(match.group(2))
             return None, None
-        
-        compas3x_data[['n_carbons', 'n_hydrogens']] = compas3x_data['common_id'].apply(
+
+        compas3x_data[["n_carbons", "n_hydrogens"]] = compas3x_data["common_id"].apply(
             lambda x: pd.Series(extract_carbons_hydrogens(x))
         )
-        
+
         # Get GFN2-xTB absolute energies (convert from eV to hartree, then to kJ/mol for comparison)
-        if 'Etot_eV' not in compas3x_data.columns:
+        if "Etot_eV" not in compas3x_data.columns:
             print("Warning: 'Etot_eV' column not found in COMPAS-3x data")
             return False
-        
+
         # Convert eV to hartree (1 eV = 0.0367493 hartree)
-        compas3x_data['xtb_energy_hartree'] = compas3x_data['Etot_eV'] * 0.0367493
-        
+        compas3x_data["xtb_energy_hartree"] = compas3x_data["Etot_eV"] * 0.0367493
+
         # Build lookup for xTB energies by common_id
-        xtb_energy_lookup = compas3x_data.set_index('common_id')['xtb_energy_hartree'].to_dict()
-        
+        xtb_energy_lookup = compas3x_data.set_index("common_id")[
+            "xtb_energy_hartree"
+        ].to_dict()
+
         # Compute xTB isomerization energies relative to minimum revDSD-PBEP86-D4 isomer
         def compute_xtb_isomerization(row):
-            ch_key = (row['n_carbons'], row['n_hydrogens'])
+            ch_key = (row["n_carbons"], row["n_hydrogens"])
             min_common_id = revdsd_min_isomers.get(ch_key)
             if min_common_id is None:
                 return None
-            xtb_energy = xtb_energy_lookup.get(row['common_id'])
+            xtb_energy = xtb_energy_lookup.get(row["common_id"])
             xtb_min_energy = xtb_energy_lookup.get(min_common_id)
             if xtb_energy is None or xtb_min_energy is None:
                 return None
             return xtb_energy - xtb_min_energy
-        
-        compas3x_data['xtb_isomerization_hartree'] = compas3x_data.apply(compute_xtb_isomerization, axis=1)
-        
-        # Merge with revDSD-PBEP86-D4 data
-        merged = revdsd_df[['common_id', 'n_carbons', 'n_hydrogens', 'isomerization_energy_hartree']].merge(
-            compas3x_data[['common_id', 'xtb_isomerization_hartree']],
-            on='common_id',
-            how='inner'
+
+        compas3x_data["xtb_isomerization_hartree"] = compas3x_data.apply(
+            compute_xtb_isomerization, axis=1
         )
-        
+
+        # Merge with revDSD-PBEP86-D4 data
+        merged = revdsd_df[
+            ["common_id", "n_carbons", "n_hydrogens", "isomerization_energy_hartree"]
+        ].merge(
+            compas3x_data[["common_id", "xtb_isomerization_hartree"]],
+            on="common_id",
+            how="inner",
+        )
+
         # Filter out rows where xTB isomerization energy couldn't be computed
-        merged = merged.dropna(subset=['xtb_isomerization_hartree'])
-        
+        merged = merged.dropna(subset=["xtb_isomerization_hartree"])
+
         if len(merged) == 0:
-            print("Warning: No matching structures found between GFN2-xTB and revDSD-PBEP86-D4")
+            print(
+                "Warning: No matching structures found between GFN2-xTB and revDSD-PBEP86-D4"
+            )
             return False
-        
+
         # Convert to kJ/mol
-        revdsd_energies_kjmol = merged['isomerization_energy_hartree'] * HARTREE_TO_KJ_PER_MOL
-        xtb_energies_kjmol = merged['xtb_isomerization_hartree'] * HARTREE_TO_KJ_PER_MOL
-        
+        revdsd_energies_kjmol = (
+            merged["isomerization_energy_hartree"] * HARTREE_TO_KJ_PER_MOL
+        )
+        xtb_energies_kjmol = merged["xtb_isomerization_hartree"] * HARTREE_TO_KJ_PER_MOL
+
         # Calculate statistics
         deviations = xtb_energies_kjmol - revdsd_energies_kjmol
         mad_kjmol = np.mean(np.abs(deviations))
-        r_squared, _, mad_percentage = calculate_stats(revdsd_energies_kjmol, xtb_energies_kjmol)
-        
-        print(f"  GFN2-xTB vs revDSD-PBEP86-D4: {len(merged)} structures, MAD = {mad_kjmol:.3f} kJ/mol, r² = {r_squared:.4f}")
-        
-        # Create plot
-        plot_path = plots_dir / 'compas3x_xtb_vs_revdsd.png'
-        create_scatter_plot(
-            revdsd_energies_kjmol, xtb_energies_kjmol,
-            r'revDSD-PBEP86-D4(noFC) $\Delta E$ (kJ/mol)',
-            r'GFN2-xTB $\Delta E$ (kJ/mol)',
-            plot_path, mad_kjmol=mad_kjmol
+        r_squared, _, mad_percentage = calculate_stats(
+            revdsd_energies_kjmol, xtb_energies_kjmol
         )
-        
+
+        print(
+            f"  GFN2-xTB vs revDSD-PBEP86-D4: {len(merged)} structures, MAD = {mad_kjmol:.3f} kJ/mol, r² = {r_squared:.4f}"
+        )
+
+        # Calculate plot limits from all functional comparison data to match other plots
+        # Collect all reference (revDSD-PBEP86-D4) and functional isomerization energies
+        all_ref_energies = []
+        all_func_energies = []
+
+        # Get all revDSD-PBEP86-D4 isomerization energies
+        revdsd_data = compas3x_df[compas3x_df["functional"] == "revDSD-PBEP86-D4"]
+        if (
+            len(revdsd_data) > 0
+            and "isomerization_energy_hartree" in revdsd_data.columns
+        ):
+            all_ref_energies.extend(
+                (
+                    revdsd_data["isomerization_energy_hartree"] * HARTREE_TO_KJ_PER_MOL
+                ).values
+            )
+
+        # Get all functional isomerization energies (excluding revDSD-PBEP86-D4)
+        for func in compas3x_df["functional"].unique():
+            if func != "revDSD-PBEP86-D4":
+                func_data = compas3x_df[compas3x_df["functional"] == func]
+                if (
+                    len(func_data) > 0
+                    and "isomerization_energy_hartree" in func_data.columns
+                ):
+                    all_func_energies.extend(
+                        (
+                            func_data["isomerization_energy_hartree"]
+                            * HARTREE_TO_KJ_PER_MOL
+                        ).values
+                    )
+
+        # Also include the current plot's data
+        all_ref_energies.extend(revdsd_energies_kjmol.values)
+        all_func_energies.extend(xtb_energies_kjmol.values)
+
+        # Calculate global limits
+        if len(all_ref_energies) > 0 and len(all_func_energies) > 0:
+            global_min = min(min(all_ref_energies), min(all_func_energies))
+            global_max = max(max(all_ref_energies), max(all_func_energies))
+            # Add small padding
+            padding = (global_max - global_min) * 0.05
+            global_min -= padding
+            global_max += padding
+            # Ensure square aspect ratio
+            max_range = max(global_max - global_min, 1.0)
+            center = (global_min + global_max) / 2
+            plot_limits = (
+                (center - max_range / 2, center + max_range / 2),
+                (center - max_range / 2, center + max_range / 2),
+            )
+        else:
+            plot_limits = None
+
+        # Create plot with same limits as other plots
+        plot_path = plots_dir / "compas3x_xtb_vs_revdsd.png"
+        xlim = plot_limits[0] if plot_limits else None
+        ylim = plot_limits[1] if plot_limits else None
+        create_scatter_plot(
+            revdsd_energies_kjmol,
+            xtb_energies_kjmol,
+            r"revDSD-PBEP86-D4(noFC) $\Delta E$ (kJ/mol)",
+            r"GFN2-xTB $\Delta E$ (kJ/mol)",
+            plot_path,
+            mad_kjmol=mad_kjmol,
+            xlim=xlim,
+            ylim=ylim,
+        )
+
         return True
-        
+
     except Exception as e:
         print(f"Warning: Failed to generate GFN2-xTB comparison plot: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
 
 def generate_latex_file(plots_dir, table_file, output_file):
     """Generate the supporting_information.tex file."""
-    
+
     # Check which plot files exist
     plot_files = {f.stem: f for f in plots_dir.glob("compas3x_*_vs_revdsd.png")}
-    xtb_plot_exists = (plots_dir / 'compas3x_xtb_vs_revdsd.png').exists()
-    
+    xtb_plot_exists = (plots_dir / "compas3x_xtb_vs_revdsd.png").exists()
+
     def get_plot_path(func_name, with_d4):
         """Get the plot file path for a functional."""
         suffix = "_with_d4" if with_d4 else "_without_d4"
-        plot_name = f"compas3x_{format_functional_name(func_name)}{suffix}_vs_revdsd.png"
+        plot_name = (
+            f"compas3x_{format_functional_name(func_name)}{suffix}_vs_revdsd.png"
+        )
         return f"plots/{plot_name}"
-    
+
     def has_plot(func_name, with_d4):
         """Check if a plot exists for a functional."""
         suffix = "_with_d4" if with_d4 else "_without_d4"
         plot_stem = f"compas3x_{format_functional_name(func_name)}{suffix}_vs_revdsd"
         return plot_stem in plot_files
-    
+
     def generate_functional_section(func_name, func_display):
         """Generate LaTeX code for a functional's figure section."""
         has_d4 = func_name not in NO_D4_FUNCTIONALS
-        
-        latex = f"\\FloatBarrier\n\\needspace{{15\\baselineskip}}\n\\subsubsection{{{func_display}}}\n\n"
-        latex += "\\begin{figure}[htbp]\n\\centering\n"
-        
+
+        latex = f"\\FloatBarrier\n\\needspace{{7\\baselineskip}}\n\\subsubsection{{{func_display}}}\n\n"
+        latex += "\\begin{figure}[H]\n\\centering\n"
+
         # Left subfigure (without D4)
-        latex += "\\begin{subfigure}{0.48\\textwidth}\n\\centering\n"
+        latex += "\\begin{subfigure}{0.45\\textwidth}\n\\centering\n"
         if has_plot(func_name, False):
             latex += f"\\includegraphics[width=\\textwidth]{{{get_plot_path(func_name, False)}}}\n"
             latex += "\\caption{Without D4}\n"
@@ -191,417 +283,421 @@ def generate_latex_file(plots_dir, table_file, output_file):
             latex += "\\caption{Without D4 - Not available}\n"
         latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_no_d4}}\n"
         latex += "\\end{subfigure}\n\\hfill\n"
-        
+
         # Right subfigure (with D4)
-        latex += "\\begin{subfigure}{0.48\\textwidth}\n\\centering\n"
+        latex += "\\begin{subfigure}{0.45\\textwidth}\n\\centering\n"
         if has_d4 and has_plot(func_name, True):
             latex += f"\\includegraphics[width=\\textwidth]{{{get_plot_path(func_name, True)}}}\n"
             latex += "\\caption{With D4}\n"
         else:
-            latex += f"% {func_display} does not support D4\n" if not has_d4 else "% Plot not available\n"
+            latex += (
+                f"% {func_display} does not support D4\n"
+                if not has_d4
+                else "% Plot not available\n"
+            )
             latex += "\\caption{With D4 - Not available}\n"
         latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_with_d4}}\n"
         latex += "\\end{subfigure}\n"
-        
-        latex += f"\\caption{{{func_display} comparison to revDSD-PBEP86-D4}}\n"
+
+        latex += f"\\caption{{{func_display}/def2-TZVP comparison to revDSD-PBEP86-D4(noFC)/def2-QZVPP isomerization energies for COMPAS-3x geometries.}}\n"
         latex += f"\\label{{fig:{format_functional_name(func_name).lower()}}}\n"
         latex += "\\end{figure}\n\n"
-        
+
         return latex
-    
+
     # Get table filename (just the name, not the path)
     table_filename = table_file.name if isinstance(table_file, Path) else table_file
-    
+
     # Generate LaTeX content
-    latex_content = """\\documentclass[12pt]{article}
+    latex_content = (
+        """\\documentclass[12pt]{achemso}
 \\usepackage[utf8]{inputenc}
 \\usepackage{graphicx}
 \\usepackage{booktabs}
 \\usepackage{multirow}
-\\usepackage{geometry}
 \\usepackage{placeins}
 \\usepackage{subcaption}
 \\usepackage{needspace}
 \\usepackage{rotating}
-\\geometry{a4paper, margin=1in}
+\\usepackage{microtype}
+\\usepackage{hyperref}
+\\usepackage{amsmath}
+\\usepackage{float}
+\\usepackage{enumitem}
+\\usepackage{lmodern}
+\\setlist[itemize]{itemsep=0pt, parsep=0pt, topsep=2pt, partopsep=0pt}
+\\usepackage{textcomp}
+\\usepackage[T1]{fontenc}
+\\renewcommand{\\ttdefault}{lmtt}
+\\newcommand{\\colname}[1]{{\\ttfamily\\bfseries #1}}
+\\renewcommand{\\affilfont}{\\scriptsize}
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Supporting Information: Double-Hybrid, but not Double-Cost: GPU Accelerated DHDFT for the COMPAS-3 Dataset},
+    pdfauthor={Ryan Stocks, Elise Palethorpe, Amir Karton, Giuseppe M. J. Barca},
+}
 
 \\title{Supporting Information:\\\\
-Comparison of DFT Functionals to revDSD-PBEP86-D4}
-\\author{}
+Double-Hybrid, but not Double-Cost: GPU Accelerated DHDFT for the COMPAS-3 Dataset}
+
+\\author{Ryan Stocks}
+\\affiliation{School of Computing, Australian National University, Canberra, ACT 2601, Australia}
+\\email{ryan.stocks@anu.edu.au}
+
+\\author{Elise Palethorpe}
+\\affiliation{School of Computing, Australian National University, Canberra, ACT 2601, Australia}
+
+\\author{Amir Karton}
+\\affiliation{School of Science and Technology, University of New England, Armidale, New South Wales, Australia}
+
+\\author{Giuseppe M. J. Barca}
+\\affiliation{School of Computing, Australian National University, Canberra, ACT 2601, Australia}
+\\alsoaffiliation{Monash Institute of Pharmaceutical Sciences, Melbourne, Parkville VIC 3052, Australia}
+\\alsoaffiliation{QDX Technologies, Dickson, ACT 2602, Australia}
+\\email{giuseppe.barca@anu.edu.au}
+
 \\date{}
 
 \\begin{document}
 
 \\maketitle
 
-\\section{Dataset Summary}
+\\section{Introduction}
 
-This section provides a comprehensive description of the computational datasets used in this study. All data files are available in the supporting information.
+This supporting information provides parameters for linear-fit corrections, comparison plots for benchmarked functionals against the reference method revDSD-PBEP86-D4(noFC)/def2-QZVPP, and detailed descriptions of the produced dataset of DFT energies evaluated on the COMPAS-3 database of polybenzenoid hydrocarbon isomers. The generated dataset contains revDSD-PBEP86-D4(noFC)/def2-QZVPP calculations on the full COMPAS-3 dataset (both COMPAS-3x and COMPAS-3D geometries), along with benchmark calculations for LDA, GGA, and meta-GGA functionals on the COMPAS-3x subset. The dataset includes a breakdown of energy components including SCF, PT2 opposite-spin and same-spin corrections, D4 dispersion, exchange-correlation, and nuclear repulsion energies, molecular orbital properties (HOMO, LUMO, HOMO-LUMO gap) from the SCF calculation, and computational performance metrics including timing and floating-point throughput.
 
-\\subsection{EXESS Dataset (\\texttt{exess\\_data.csv})}
+All calculations were performed using the Extreme Scale Electronic Structure System (EXESS) software package with a robustly pruned (99,590) integration grid. The revDSD-PBEP86-D4(noFC) calculations were performed using the def2-QZVPP basis set and all LDA, GGA, and meta-GGA calculations used def2-TZVP. A tight convergence threshold of $10^{-10}$ was used for all calculations which were each performed on a single 4$\times$A100 node of the Perlmutter supercomputer in batches of 20 geometries per submitted calculation. The RI approximation was used for both the SCF and PT2 components of all calculations.
 
-The EXESS dataset contains results from density-functional theory calculations performed using the EXESS (Extended Embedded Subsystem) method. This dataset includes calculations for COMPAS-3x (GFN2-xTB optimized geometries), COMPAS-3D (CAM-B3LYP-D3BJ optimized geometries), and PAH335 (G4(MP2) optimized geometries) molecular systems across multiple functionals and basis sets.
+\\section{Linear Fit Corrections}
 
-\\subsubsection{Column Descriptions}
+Here we present linear fit corrections and the mean absolute deviation following the correction for the tested DFT functionals against the reference method revDSD-PBEP86-D4(noFC)/def2-QZVPP. The statistics are based on isomerization energies for all COMPAS-3x geometries. 
 
-\\begin{description}
-\\item[\\texttt{isomer\\_name}] Full name of the molecular isomer, including prefix (e.g., \\texttt{compas3x\\_hc\\_c24h14\\_0pent\\_1}, \\texttt{compas3D\\_hc\\_c24h14\\_0pent\\_1}, \\texttt{PAH335\\_C24H14\\_pah1}).
+Isomerization energies were evaluated with respect to the isomer with the minimum energy using the revDSD-PBEP86-D4(noFC) functional. For an isomer $A$ and functional $F$, the isomerization energy is calculated as:
+\\begin{equation}
+\\Delta E ^F_{A,\\text{isomerization}} = E^F_A - E^F_{M(A)},
+\\end{equation}
+where $M(A)$ is the minimum energy isomer evaluated using the double hybrid reference method. As such, isomerization energies can be negative for the benchmarked functionals because of error resulting in a different minimum-energy isomer.
 
-\\item[\\texttt{optimizer}] Geometry optimization method used: \\texttt{GFN2-xTB} for COMPAS-3x geometries or \\texttt{CAM-B3LYP-D3BJ} for COMPAS-3D geometries.
+\\FloatBarrier
+\\input{"""
+        + table_filename
+        + """}
+\\FloatBarrier
 
-\\item[\\texttt{functional}] Density functional used in the calculation (e.g., \\texttt{revDSD-PBEP86-D4}, \\texttt{PBE}, \\texttt{BLYP}, \\texttt{TPSS}).
+The table shows linear fit correction parameters (slope and offset), and MAD after linear fit correction. The linear fit correction takes the form:
+\\begin{equation}
+E^{\\text{corrected}}_A = E^F_A \\times \\text{slope} + \\text{offset},
+\\end{equation}
+where the slope and offset are determined by linear regression of the reference revDSD-PBEP86-D4(noFC) isomerization energies relative to the tested functionals isomerization energies. The linear fit correction significantly improves the performance of many functionals, with revPBE-D4 achieving the best performance with a corrected MAD of just 1.4~kJ/mol.
 
-\\item[\\texttt{basis\\_set}] Basis set used (e.g., \\texttt{def2-QZVPP}, \\texttt{def2-TZVP}).
-
-\\item[\\texttt{batch\\_name}] Name of the calculation batch (e.g., \\texttt{isomers\\_0-19}).
-
-\\item[\\texttt{topology\\_index}] Index of the topology within the batch.
-
-\\item[\\texttt{id}] Unique identifier for the isomer within its (C, H) group.
-
-\\item[\\texttt{filename}] Name of the JSON output file from EXESS.
-
-\\item[\\texttt{total\\_energy\\_hartree}] Total electronic energy in hartree, including SCF, MP2 corrections, and D4 dispersion correction.
-
-\\item[\\texttt{isomerization\\_energy\\_hartree}] Energy relative to the minimum energy isomer for the same (C, H) composition, calculated with the same functional and basis set.
-
-\\item[\\texttt{scf\\_energy\\_hartree}] Self-consistent field (SCF) energy in hartree.
-
-\\item[\\texttt{pt2\\_os\\_correction\\_hartree}] MP2 opposite-spin (OS) correlation correction in hartree.
-
-\\item[\\texttt{pt2\\_ss\\_correction\\_hartree}] MP2 same-spin (SS) correlation correction in hartree.
-
-\\item[\\texttt{d4\\_energy\\_hartree}] D4 dispersion correction energy in hartree (may be \\texttt{None} for functionals without D4 support).
-
-\\item[\\texttt{xc\\_energy\\_hartree}] Exchange-correlation energy from the DFT functional in hartree.
-
-\\item[\\texttt{nuc\\_repulsion\\_energy\\_hartree}] Nuclear repulsion energy in hartree.
-
-\\item[\\texttt{elec\\_energy\\_hartree}] Total electronic energy (SCF + XC) in hartree.
-
-\\item[\\texttt{homo\\_hartree}] Highest occupied molecular orbital (HOMO) energy in hartree.
-
-\\item[\\texttt{lumo\\_hartree}] Lowest unoccupied molecular orbital (LUMO) energy in hartree.
-
-\\item[\\texttt{hlg\\_hartree}] HOMO-LUMO gap in hartree (LUMO - HOMO).
-
-\\item[\\texttt{n\\_primary\\_basis\\_functions}] Number of primary basis functions used in the calculation.
-
-\\item[\\texttt{n\\_atoms}] Total number of atoms in the molecule.
-
-\\item[\\texttt{n\\_carbons}] Number of carbon atoms.
-
-\\item[\\texttt{n\\_hydrogens}] Number of hydrogen atoms.
-
-\\item[\\texttt{n\\_scf\\_iterations}] Number of SCF iterations required for convergence.
-
-\\item[\\texttt{total\\_time\\_s}] Total calculation time in seconds.
-
-\\item[\\texttt{scf\\_time\\_s}] Time spent in SCF iterations in seconds.
-
-\\item[\\texttt{mp2\\_time\\_s}] Time spent in MP2 calculation in seconds.
-
-\\item[\\texttt{b\\_formation\\_time\\_s}] Time spent forming B matrices in seconds.
-
-\\item[\\texttt{diag\\_time\\_s}] Time spent in matrix diagonalization in seconds.
-
-\\item[\\texttt{ri\\_fock\\_time\\_s}] Time spent in RI-Fock matrix construction in seconds.
-
-\\item[\\texttt{xc\\_time\\_s}] Time spent in exchange-correlation integration in seconds.
-
-\\item[\\texttt{basis\\_transforms\\_time\\_s}] Time spent in basis set transformations in seconds.
-
-\\item[\\texttt{total\\_tflop/s}] Total computational throughput in teraflops per second.
-
-\\item[\\texttt{scf\\_tflop/s}] SCF computational throughput in teraflops per second.
-
-\\item[\\texttt{mp2\\_tflop/s}] MP2 computational throughput in teraflops per second.
-
-\\item[\\texttt{b\\_formation\\_tflop/s}] B matrix formation computational throughput in teraflops per second.
-
-\\item[\\texttt{ri\\_fock\\_tflop/s}] RI-Fock computational throughput in teraflops per second.
-
-\\item[\\texttt{xc\\_tflop/s}] Exchange-correlation computational throughput in teraflops per second.
-\\end{description}
-
-\\subsection{ORCA Dataset (\\texttt{orca\\_data.csv})}
-
-The ORCA dataset contains results from calculations performed using ORCA v6.0.1 with the revDSD-PBEP86-D4(noFC) functional. This dataset includes calculations for COMPAS-3x and COMPAS-3D molecular systems across multiple basis set combinations.
-
-\\subsubsection{Column Descriptions}
-
-\\begin{description}
-\\item[\\texttt{isomer}] Full name of the molecular isomer (e.g., \\texttt{compas3x\\_hc\\_c24h14\\_0pent\\_1}, \\texttt{compas3D\\_hc\\_c24h14\\_0pent\\_1}).
-
-\\item[\\texttt{num\\_carbons}] Number of carbon atoms.
-
-\\item[\\texttt{num\\_hydrogens}] Number of hydrogen atoms.
-
-\\item[\\texttt{basis\\_combo\\_id}] Identifier for the basis set combination (e.g., \\texttt{qz\\_riri}, \\texttt{tz\\_rijk}).
-
-\\item[\\texttt{primary\\_basis}] Primary basis set (e.g., \\texttt{def2-QZVPP}, \\texttt{def2-TZVP}, \\texttt{def2-SVP}).
-
-\\item[\\texttt{scf\\_aux\\_basis}] Auxiliary basis set for SCF calculations (e.g., \\texttt{def2/JK}, \\texttt{def2-QZVPP/C}, or empty if not used).
-
-\\item[\\texttt{ri\\_aux\\_basis}] Auxiliary basis set for RI-MP2 calculations (e.g., \\texttt{def2-QZVPP/C}, \\texttt{def2/JK}, or empty if not used).
-
-\\item[\\texttt{filename}] Name of the ORCA output file.
-
-\\item[\\texttt{multiplicity}] Spin multiplicity of the system.
-
-\\item[\\texttt{charge}] Total charge of the system.
-
-\\item[\\texttt{num\\_atoms}] Total number of atoms in the molecule.
-
-\\item[\\texttt{num\\_basis\\_functions}] Number of basis functions used in the calculation.
-
-\\item[\\texttt{total\\_energy\\_hartree}] Total electronic energy in hartree, including all corrections.
-
-\\item[\\texttt{isomerization\\_energy\\_hartree}] Energy relative to the minimum energy isomer for the same (C, H) composition, calculated with the same basis set.
-
-\\item[\\texttt{relative\\_energy\\_hartree}] Same as \\texttt{isomerization\\_energy\\_hartree} (relative to minimum isomer).
-
-\\item[\\texttt{scf\\_energy\\_hartree}] Self-consistent field (SCF) energy in hartree.
-
-\\item[\\texttt{dft\\_eexchange\\_hartree}] DFT exchange energy component in hartree.
-
-\\item[\\texttt{dft\\_ecorr\\_hartree}] DFT correlation energy component in hartree.
-
-\\item[\\texttt{dft\\_exc\\_hartree}] Total DFT exchange-correlation energy in hartree.
-
-\\item[\\texttt{dft\\_finalen\\_hartree}] Final DFT energy (SCF + XC) in hartree.
-
-\\item[\\texttt{mp2\\_ref\\_hartree}] MP2 reference energy (SCF energy) in hartree.
-
-\\item[\\texttt{mp2\\_corr\\_hartree}] MP2 correlation correction in hartree.
-
-\\item[\\texttt{mp2\\_total\\_hartree}] Total MP2 energy (reference + correlation) in hartree.
-
-\\item[\\texttt{vdw\\_correction\\_hartree}] van der Waals (D4) dispersion correction in hartree.
-
-\\item[\\texttt{scf\\_iterations}] Number of SCF iterations required for convergence.
-
-\\item[\\texttt{startup\\_time\\_s}] Calculation startup time in seconds.
-
-\\item[\\texttt{scf\\_time\\_s}] Time spent in SCF iterations in seconds.
-
-\\item[\\texttt{property\\_time\\_s}] Time spent in property calculations in seconds.
-
-\\item[\\texttt{rij\\_k\\_time\\_s}] Time spent in RI-JK calculations in seconds.
-
-\\item[\\texttt{xc\\_integration\\_time\\_s}] Time spent in exchange-correlation integration in seconds.
-
-\\item[\\texttt{mp2\\_time\\_s}] Time spent in MP2 calculation in seconds.
-
-\\item[\\texttt{total\\_time\\_s}] Total calculation time in seconds.
-\\end{description}
-
-\\subsection{ORCA-EXESS Comparison Dataset (\\texttt{orca\\_exess\\_comparison\\_detailed.csv})}
-
-This dataset contains a detailed comparison between ORCA and EXESS calculations for C24H14 isomers (26 total: 13 COMPAS-3x and 13 COMPAS-3D), including energy components and deviations. All calculations use the revDSD-PBEP86-D4 functional and def2-QZVPP basis set.
-
-\\subsubsection{Column Descriptions}
-
-\\begin{description}
-\\item[\\texttt{common\\_id}] Common identifier extracted from isomer name (e.g., \\texttt{c24h14\\_0pent\\_1}).
-
-\\item[\\texttt{prefix}] Dataset prefix: \\texttt{compas3x} for GFN2-xTB optimized geometries or \\texttt{compas3D} for CAM-B3LYP-D3BJ optimized geometries.
-
-\\item[\\texttt{isomer\\_name}] Full name of the molecular isomer.
-
-\\item[\\texttt{total\\_energy\\_hartree\\_exess}] Total energy from EXESS calculation in hartree.
-
-\\item[\\texttt{total\\_energy\\_hartree\\_orca}] Total energy from ORCA calculation in hartree.
-
-\\item[\\texttt{scf\\_energy\\_hartree\\_exess}] SCF energy from EXESS in hartree.
-
-\\item[\\texttt{scf\\_energy\\_hartree\\_orca}] SCF energy from ORCA in hartree.
-
-\\item[\\texttt{xc\\_energy\\_hartree}] Exchange-correlation energy from EXESS in hartree.
-
-\\item[\\texttt{dft\\_exc\\_hartree}] Exchange-correlation energy from ORCA in hartree.
-
-\\item[\\texttt{pt2\\_os\\_correction\\_hartree}] MP2 opposite-spin correction from EXESS in hartree.
-
-\\item[\\texttt{pt2\\_ss\\_correction\\_hartree}] MP2 same-spin correction from EXESS in hartree.
-
-\\item[\\texttt{exess\\_mp2\\_total\\_hartree}] Total MP2 correction from EXESS (OS + SS) in hartree.
-
-\\item[\\texttt{mp2\\_corr\\_hartree}] MP2 correlation correction from ORCA in hartree.
-
-\\item[\\texttt{exess\\_rel\\_energy\\_hartree}] Relative energy from EXESS (relative to minimum EXESS energy) in hartree.
-
-\\item[\\texttt{orca\\_rel\\_energy\\_hartree}] Relative energy from ORCA (relative to minimum ORCA energy) in hartree.
-
-\\item[\\texttt{abs\\_deviation\\_hartree}] Absolute deviation between EXESS and ORCA total energies in hartree.
-
-\\item[\\texttt{abs\\_deviation\\_kjmol}] Absolute deviation between EXESS and ORCA total energies in kJ/mol.
-
-\\item[\\texttt{rel\\_deviation\\_hartree}] Deviation in relative energies (isomerization energies) in hartree.
-
-\\item[\\texttt{rel\\_deviation\\_kjmol}] Deviation in relative energies (isomerization energies) in kJ/mol.
-
-\\item[\\texttt{scf\\_deviation\\_hartree}] Deviation in SCF energies in hartree.
-
-\\item[\\texttt{scf\\_deviation\\_kjmol}] Deviation in SCF energies in kJ/mol.
-
-\\item[\\texttt{xc\\_deviation\\_hartree}] Deviation in exchange-correlation energies in hartree.
-
-\\item[\\texttt{xc\\_deviation\\_kjmol}] Deviation in exchange-correlation energies in kJ/mol.
-
-\\item[\\texttt{mp2\\_deviation\\_hartree}] Deviation in MP2 correlation corrections in hartree.
-
-\\item[\\texttt{mp2\\_deviation\\_kjmol}] Deviation in MP2 correlation corrections in kJ/mol.
-\\end{description}
-
-\\section{Summary Statistics}
-
-\\input{""" + table_filename + """}
-
+\\FloatBarrier
 \\section{Comparison Plots}
 
-This supporting information contains scatter plots comparing various DFT functionals to revDSD-PBEP86-D4(noFC)/def2-QZVPP for COMPAS-3x geometries. All calculations were performed with the (99,590) grid and def2-TZVP basis set. The left column shows comparisons without the D4 correction, and the right column shows comparisons with the D4 correction.
+This section contains scatter plots comparing various DFT functionals to revDSD-PBEP86-D4(noFC)/def2-QZVPP for COMPAS-3x geometries. 
+
+For each functional, two subfigures are provided: the left subfigure shows comparisons without the D4 dispersion correction, and the right subfigure shows comparisons with the D4 correction (when supported by the functional). Each plot displays the mean absolute deviation (MAD) in kJ/mol, and the red dashed diagonal line represents perfect agreement between the methods. 
 
 \\subsection{LDA Functionals}
 
 """
-    
+    )
+
     # Add LDA functionals
     for func in LDA_FUNCTIONALS:
         latex_content += generate_functional_section(func, func)
-    
+
     # Add GGA functionals
     latex_content += "\\FloatBarrier\n\\subsection{GGA Functionals}\n\n"
     for func in GGA_FUNCTIONALS:
         latex_content += generate_functional_section(func, func)
-    
+
     # Add MGGA functionals
     latex_content += "\\FloatBarrier\n\\subsection{MGGA Functionals}\n\n"
     for func in MGGA_FUNCTIONALS:
         latex_content += generate_functional_section(func, func)
-    
+
     # Add GFN2-xTB comparison
     if xtb_plot_exists:
         latex_content += """\\FloatBarrier
 \\subsection{Semiempirical Methods}
 
 \\FloatBarrier
-\\needspace{15\\baselineskip}
+\\needspace{7\\baselineskip}
 \\subsubsection{GFN2-xTB}
 
-\\begin{figure}[htbp]
+\\begin{figure}[H]
 \\centering
-\\includegraphics[width=0.6\\textwidth]{plots/compas3x_xtb_vs_revdsd.png}
-\\caption{GFN2-xTB comparison to revDSD-PBEP86-D4(noFC)/def2-QZVPP for COMPAS-3x geometries.}
+\\includegraphics[width=0.45\\textwidth]{plots/compas3x_xtb_vs_revdsd.png}
+\\caption{GFN2-xTB comparison to revDSD-PBEP86-D4(noFC)/def2-QZVPP isomerization energies for COMPAS-3x geometries.}
 \\label{fig:xtb}
 \\end{figure}
 
 """
-    
-    latex_content += "\\end{document}\n"
-    
+
+    latex_content += """\\section{Dataset Description}
+
+This section provides a description of the computational dataset generated through this study. The complete dataset is available in the supporting information as a CSV file named \\texttt{compas3\\_dhdft\\_benchmark\\_raw\\_data.csv}. Each row represents a single calculation for a specific molecular isomer geometry and functional combination. The dataset includes:
+
+\\begin{itemize}
+    \\item All revDSD-PBEP86-D4(noFC)/def2-QZVPP calculations on the full COMPAS-3 dataset (both COMPAS-3x and COMPAS-3D geometries)
+    \\item Benchmark calculations for LDA, GGA, and MGGA functionals on the COMPAS-3x subset using def2-TZVP basis set
+    \\item Energy components including SCF, PT2 opposite-spin and same-spin corrections, D4 dispersion, exchange-correlation, and nuclear repulsion energies
+    \\item Molecular orbital properties (HOMO, LUMO, HOMO-LUMO gap) from the SCF calculation
+    \\item Computational performance metrics including timing and floating-point throughput
+\\end{itemize}
+
+\\subsubsection{Column Descriptions}
+
+The following sections describe all columns in the dataset, organized by category:
+
+\\textbf{System Identification:}
+
+\\begin{itemize}
+    \\item \\colname{isomer\\_name}: Full name of the molecular isomer, including prefix indicating the geometry source (e.g., \\texttt{compas3x\\_hc\\_c24h14\\_0pent\\_1} for COMPAS-3x, \\texttt{compas3D\\_hc\\_c24h14\\_0pent\\_1} for COMPAS-3D).
+    \\item \\colname{optimizer}: Geometry optimization method used: \\texttt{GFN2-xTB} for COMPAS-3x geometries or \\texttt{CAM-B3LYP-D3BJ} for COMPAS-3D geometries.
+    \\item \\colname{functional}: Density functional used in the calculation (e.g., \\texttt{revDSD-PBEP86-D4}, \\texttt{PBE}, \\texttt{BLYP}, \\texttt{TPSS}).
+    \\item \\colname{basis\\_set}: Basis set used (e.g., \\texttt{def2-QZVPP}, \\texttt{def2-TZVP}).
+    \\item \\colname{id}: Unique identifier for the isomer within its (C, H) group.
+\\end{itemize}
+
+\\textbf{Energy Components:}
+
+\\begin{itemize}
+    \\item \\colname{total\\_energy\\_hartree}: Total electronic energy in hartree. For double-hybrid functionals (e.g., revDSD-PBEP86-D4), this is calculated as: SCF energy + PT2 opposite-spin correction + PT2 same-spin correction + D4 dispersion correction. For LDA, GGA, and MGGA functionals, the PT2 corrections are zero (\\texttt{None}), so the total energy is: SCF energy + D4 dispersion correction (when applicable). Note that the D4 correction must be subtracted to obtain the raw functionals energy.
+    \\item \\colname{isomerization\\_energy\\_hartree}: Energy relative to the minimum energy isomer (with revDSD-PBEP86-D4(noFC)) for the same (C, H) composition, calculated with the same functional and basis set. This represents the relative stability of different structural isomers.
+    \\item \\colname{scf\\_energy\\_hartree}: Converged self-consistent field (SCF) energy in hartree, prior to PT2 step for double hybrids.
+    \\item \\colname{pt2\\_os\\_correction\\_hartree}: PT2 opposite-spin (OS) correlation correction in hartree, accounting for electron correlation between electrons of opposite spin. This value is \\texttt{None} for LDA, GGA, and MGGA functionals, as PT2 corrections are only calculated for double-hybrid functionals (e.g., revDSD-PBEP86-D4). Note that it has already been scaled by $c_{os}$.
+    \\item \\colname{pt2\\_ss\\_correction\\_hartree}: PT2 same-spin (SS) correlation correction in hartree, accounting for electron correlation between electrons of the same spin. This value is \\texttt{None} for LDA, GGA, and MGGA functionals, as PT2 corrections are only calculated for double-hybrid functionals (e.g., revDSD-PBEP86-D4). Note that it has already been scaled by $c_{ss}$.
+    \\item \\colname{d4\\_energy\\_hartree}: D4 dispersion correction energy in hartree. This value is \\texttt{None} for functionals that do not support the D4 correction (e.g., SVWN5, HCTH407, M11-L, MN15L, t-HCTH).
+    \\item \\colname{xc\\_energy\\_hartree}: Exchange-correlation energy from the DFT functional evaluated on the converged SCF density in hartree.
+    \\item \\colname{nuc\\_repulsion\\_energy\\_hartree}: Nuclear repulsion energy in hartree, representing the classical electrostatic repulsion between atomic nuclei.
+    \\item \\colname{elec\\_energy\\_hartree}: Total electronic energy in hartree, calculated as SCF energy $-$ Nuclear Repulsion Energy $-$ XC energy.
+\\end{itemize}
+
+\\textbf{Molecular Orbital Properties:}
+
+\\begin{itemize}
+    \\item \\colname{homo\\_hartree}: Highest occupied molecular orbital (HOMO) energy in hartree (no PT2 correction).
+    \\item \\colname{lumo\\_hartree}: Lowest unoccupied molecular orbital (LUMO) energy in hartree (no PT2 correction).
+    \\item \\colname{hlg\\_hartree}: HOMO-LUMO gap in hartree, calculated as LUMO energy - HOMO energy. This represents the energy gap between the highest occupied and lowest unoccupied molecular orbitals.
+\\end{itemize}
+
+\\textbf{Molecular Composition:}
+
+\\begin{itemize}
+    \\item \\colname{n\\_atoms}: Total number of atoms in the molecule (\\# Carbons $+$ \\# Hydrogens).
+    \\item \\colname{n\\_carbons}: Number of carbon atoms.
+    \\item \\colname{n\\_hydrogens}: Number of hydrogen atoms.
+\\end{itemize}
+
+\\textbf{Computational Details:}
+
+\\begin{itemize}
+    \\item \\colname{n\\_primary\\_basis\\_functions}: Number of primary basis functions used in the calculation.
+    \\item \\colname{n\\_scf\\_iterations}: Number of self-consistent field (SCF) iterations required for convergence.
+\\end{itemize}
+
+\\textbf{Timing Information:}
+
+\\begin{itemize}
+    \\item \\colname{total\\_time\\_s}: Total calculation time in seconds.
+    \\item \\colname{scf\\_time\\_s}: Time spent in self-consistent field (SCF) iterations in seconds.
+    \\item \\colname{pt2\\_time\\_s}: Time spent in PT2 correlation calculation in seconds.
+    \\item \\colname{b\\_formation\\_time\\_s}: Time spent forming $B_{\\mu\\nu}^P$ matrices for the resolution of identity (RI) approximation in seconds.
+    \\item \\colname{diag\\_time\\_s}: Time spent in Fock matrix diagonalization during SCF iterations in seconds.
+    \\item \\colname{ri\\_fock\\_time\\_s}: Time spent in RI-Fock matrix construction (Coulomb + Exchange) in seconds.
+    \\item \\colname{xc\\_time\\_s}: Time spent in exchange-correlation energy integration in seconds.
+    \\item \\colname{basis\\_transforms\\_time\\_s}: Time spent in basis set transformations (Cartesian to Spherical) in seconds.
+\\end{itemize}
+
+\\textbf{Computational Performance:}
+
+Only floating point operations from dense linear algebra operations are counted towards the throughput metrics so these are lower bounds on the actual performance.
+
+\\begin{itemize}
+    \\item \\colname{total\\_tflop/s}: Total computational throughput in teraflops per second (TFLOP/s) for the overall calculation.
+    \\item \\colname{scf\\_tflop/s}: SCF computational throughput in teraflops per second.
+    \\item \\colname{pt2\\_tflop/s}: PT2 computational throughput in teraflops per second.
+    \\item \\colname{b\\_formation\\_tflop/s}: $B_{\\mu\\nu}^P$ matrix formation computational throughput in teraflops per second.
+    \\item \\colname{ri\\_fock\\_tflop/s}: RI-Fock matrix construction computational throughput in teraflops per second.
+    \\item \\colname{xc\\_tflop/s}: Exchange-correlation integration computational throughput in teraflops per second.
+\\end{itemize}
+
+\\end{document}
+"""
+
     # Write the file
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write(latex_content)
-    
+
     print(f"Generated LaTeX file: {output_file}")
 
 
 def main():
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
-    
+
     exess_csv = project_root / "analysis" / "exess_data.csv"
     plots_dir = script_dir / "plots"
     table_file = script_dir / "compas3x_benchmarks.tex"
     latex_file = script_dir / "supporting_information.tex"
-    
+
     # Check if EXESS CSV exists
     if not exess_csv.exists():
         print(f"ERROR: EXESS data file not found at {exess_csv}")
         sys.exit(1)
-    
-    # Step 1: Generate plots with min reference method (no linear correction)
-    print("Generating benchmark plots (using minimum reference method)...")
+
+    # Check if benchmark script exists
     benchmark_script = script_dir / "benchmark_compas3x.py"
+    if not benchmark_script.exists():
+        print(f"ERROR: Benchmark script not found at {benchmark_script}")
+        sys.exit(1)
+
+    print("=" * 70)
+    print("Generating Supporting Information Document")
+    print("=" * 70)
+    print(f"\nThis script will automatically run the benchmark script to generate")
+    print(f"all required plots and tables before compiling the LaTeX document.\n")
+
+    # Step 1: Generate plots with min reference method (no linear correction)
+    print(
+        "Step 1: Running benchmark script to generate plots (minimum reference method)..."
+    )
+    print("-" * 70)
+    # Use relative paths for output to ensure consistent path resolution
+    output_txt = "compas3x_benchmarks.txt"
     cmd = [
         sys.executable,
         str(benchmark_script),
-        "--exess-csv", str(exess_csv),
-        "--output-dir", str(plots_dir),
-        "--output", str(table_file.with_suffix('.txt')),
-        "--reference-method", "min"
+        "--exess-csv",
+        str(exess_csv),
+        "--output-dir",
+        str(plots_dir),
+        "--output",
+        output_txt,
+        "--reference-method",
+        "min",
     ]
-    
-    result = subprocess.run(cmd)
+
+    result = subprocess.run(cmd, cwd=str(script_dir))
     if result.returncode != 0:
-        print("ERROR: Failed to generate plots")
+        print("\nERROR: Benchmark script failed to generate plots")
+        print(f"Command: {' '.join(cmd)}")
         sys.exit(1)
-    
+
+    print("✓ Plots generated successfully\n")
+
     # Save plots directory before second run (which will overwrite plots)
     plots_backup = script_dir / "plots_backup"
     if plots_backup.exists():
         shutil.rmtree(plots_backup)
     shutil.copytree(plots_dir, plots_backup)
-    
+
     # Step 2: Generate table with linear_fit to get gradient/offset columns
-    print("Generating statistics table with gradient and offset...")
+    print(
+        "Step 2: Running benchmark script to generate statistics table (linear fit method)..."
+    )
+    print("-" * 70)
     cmd = [
         sys.executable,
         str(benchmark_script),
-        "--exess-csv", str(exess_csv),
-        "--output-dir", str(plots_dir),
-        "--output", str(table_file.with_suffix('.txt')),
-        "--reference-method", "linear_fit"
+        "--exess-csv",
+        str(exess_csv),
+        "--output-dir",
+        str(plots_dir),
+        "--output",
+        output_txt,
+        "--reference-method",
+        "linear_fit",
     ]
-    
-    result = subprocess.run(cmd)
+
+    result = subprocess.run(cmd, cwd=str(script_dir))
     if result.returncode != 0:
-        print("ERROR: Failed to generate table")
+        print("\nERROR: Benchmark script failed to generate statistics table")
+        print(f"Command: {' '.join(cmd)}")
         sys.exit(1)
-    
+
+    # Verify that the .tex file was generated
+    if not table_file.exists():
+        print(f"\nERROR: LaTeX table file not found at {table_file}")
+        print(
+            "The benchmark script should have generated this file. Check for errors above."
+        )
+        sys.exit(1)
+
+    print("✓ Statistics table generated successfully\n")
+
     # Restore plots from min run (overwrite the linear_fit plots)
-    print("Restoring plots with minimum reference method...")
+    print("Step 3: Restoring plots with minimum reference method...")
     for plot_file in plots_backup.glob("compas3x_*_vs_revdsd.png"):
         shutil.copy2(plot_file, plots_dir / plot_file.name)
-    
+
     # Clean up backup
     shutil.rmtree(plots_backup)
-    
-    # Step 3: Generate GFN2-xTB comparison plot
-    generate_xtb_comparison_plot(exess_csv, plots_dir)
-    
-    # Step 4: Generate LaTeX file
-    print("\nGenerating supporting_information.tex...")
+    print("✓ Plots restored\n")
+
+    # Step 4: Generate GFN2-xTB comparison plot
+    print("Step 4: Generating GFN2-xTB comparison plot...")
+    print("-" * 70)
+    if generate_xtb_comparison_plot(exess_csv, plots_dir):
+        print("✓ GFN2-xTB comparison plot generated\n")
+    else:
+        print("⚠ Warning: GFN2-xTB comparison plot could not be generated\n")
+
+    # Step 5: Generate LaTeX file
+    print("Step 5: Generating supporting_information.tex...")
+    print("-" * 70)
     generate_latex_file(plots_dir, table_file, latex_file)
-    
-    # Step 5: Compile LaTeX document
-    print("\nCompiling LaTeX document...")
+    print("✓ LaTeX file generated\n")
+
+    # Step 6: Compile LaTeX document
+    print("Step 6: Compiling LaTeX document...")
+    print("-" * 70)
     latex_dir = latex_file.parent
     latex_filename = latex_file.name
-    
+
     # Run pdflatex twice to resolve references
     for run_num in [1, 2]:
         cmd = [
             "pdflatex",
             "-interaction=nonstopmode",
-            "-output-directory", str(latex_dir),
-            str(latex_filename)
+            "-output-directory",
+            str(latex_dir),
+            str(latex_filename),
         ]
         subprocess.run(cmd, cwd=str(latex_dir))
-    
+
     # Clean up intermediate LaTeX files (but keep .tex files)
-    intermediate_extensions = ['.aux', '.log', '.out', '.toc', '.lof', '.lot', '.fls', '.fdb_latexmk', '.synctex.gz']
+    intermediate_extensions = [
+        ".aux",
+        ".log",
+        ".out",
+        ".toc",
+        ".lof",
+        ".lot",
+        ".fls",
+        ".fdb_latexmk",
+        ".synctex.gz",
+    ]
     for ext in intermediate_extensions:
         intermediate_file = latex_file.with_suffix(ext)
         if intermediate_file.exists():
             intermediate_file.unlink()
-    
-    pdf_file = latex_file.with_suffix('.pdf')
+
+    pdf_file = latex_file.with_suffix(".pdf")
     if pdf_file.exists():
+        print("✓ LaTeX compilation successful")
+        print("=" * 70)
         print(f"\nSUCCESS: Supporting information PDF generated at {pdf_file}")
+        print("=" * 70)
     else:
-        print(f"\nWARNING: PDF file not found. Check LaTeX compilation output.")
+        print("=" * 70)
+        print(f"\nWARNING: PDF file not found at {pdf_file}")
+        print("Check LaTeX compilation output above for errors.")
+        print("=" * 70)
 
 
 if __name__ == "__main__":
