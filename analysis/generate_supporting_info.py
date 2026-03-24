@@ -250,7 +250,11 @@ def generate_latex_file(plots_dir, table_file, output_file):
 
     # Check which plot files exist
     plot_files = {f.stem: f for f in plots_dir.glob("compas3x_*_vs_revdsd.png")}
+    plot_files_err_z = {
+        f.stem: f for f in plots_dir.glob("compas3x_*_error_vs_max_z.png")
+    }
     xtb_plot_exists = (plots_dir / "compas3x_xtb_vs_revdsd.png").exists()
+    xtb_err_z_exists = (plots_dir / "compas3x_GFN2_xTB_error_vs_max_z.png").exists()
 
     def get_plot_path(func_name, with_d4):
         """Get the plot file path for a functional."""
@@ -265,6 +269,65 @@ def generate_latex_file(plots_dir, table_file, output_file):
         suffix = "_with_d4" if with_d4 else "_without_d4"
         plot_stem = f"compas3x_{format_functional_name(func_name)}{suffix}_vs_revdsd"
         return plot_stem in plot_files
+
+    def get_err_z_plot_path(func_name, with_d4):
+        suffix = "_with_d4" if with_d4 else "_without_d4"
+        return (
+            f"plots/compas3x_{format_functional_name(func_name)}"
+            f"{suffix}_error_vs_max_z.png"
+        )
+
+    def has_err_z_plot(func_name, with_d4):
+        suffix = "_with_d4" if with_d4 else "_without_d4"
+        stem = (
+            f"compas3x_{format_functional_name(func_name)}{suffix}_error_vs_max_z"
+        )
+        return stem in plot_files_err_z
+
+    def generate_error_vs_max_z_section(func_name, func_display):
+        """Second figure: signed error vs max z (without/with D4 subfigures)."""
+        if not (
+            has_err_z_plot(func_name, False)
+            or (
+                func_name not in NO_D4_FUNCTIONALS and has_err_z_plot(func_name, True)
+            )
+        ):
+            return ""
+        has_d4 = func_name not in NO_D4_FUNCTIONALS
+        latex = "\\begin{figure}[H]\n\\centering\n"
+        latex += "\\begin{subfigure}{0.45\\textwidth}\n\\centering\n"
+        if has_err_z_plot(func_name, False):
+            latex += (
+                f"\\includegraphics[width=\\textwidth]{{{get_err_z_plot_path(func_name, False)}}}\n"
+            )
+            latex += "\\caption{Without D4}\n"
+        else:
+            latex += "% Plot not available\n"
+            latex += "\\caption{Without D4 - Not available}\n"
+        latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_err_z_no_d4}}\n"
+        latex += "\\end{subfigure}\n\\hfill\n"
+        latex += "\\begin{subfigure}{0.45\\textwidth}\n\\centering\n"
+        if has_d4 and has_err_z_plot(func_name, True):
+            latex += (
+                f"\\includegraphics[width=\\textwidth]{{{get_err_z_plot_path(func_name, True)}}}\n"
+            )
+            latex += "\\caption{With D4}\n"
+        else:
+            latex += (
+                f"% {func_display} does not support D4\n"
+                if not has_d4
+                else "% Plot not available\n"
+            )
+            latex += "\\caption{With D4 - Not available}\n"
+        latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_err_z_with_d4}}\n"
+        latex += "\\end{subfigure}\n"
+        latex += (
+            f"\\caption{{{func_display}: signed isomerization-energy error vs "
+            f"maximum $z$ displacement.}}\n"
+        )
+        latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_err_z}}\n"
+        latex += "\\end{figure}\n\n"
+        return latex
 
     def generate_functional_section(func_name, func_display):
         """Generate LaTeX code for a functional's figure section."""
@@ -394,11 +457,21 @@ E^{\\text{corrected}}_A = E^F_A \\times \\text{slope} + \\text{offset},
 where the slope and offset are determined by linear regression of the reference revDSD-PBEP86-D4(noFC) isomerization energies relative to the tested functionals isomerization energies. The linear fit correction significantly improves the performance of many functionals, with revPBE-D4 achieving the best performance with a corrected MAD of just 1.4~kJ/mol.
 
 \\FloatBarrier
+\\subsection{Functional benchmarks by planar/non-planar}
+
+Table~\\ref{tab:compas3x_benchmarks_maxz_combined} lists MAD, MSD, and $r^2$ with no linear correction for COMPAS-3x structures grouped into planar (max $z$ $< 1$~\\AA) and non-planar (max $z$ $\\ge 1$~\\AA) subsets (GFN2-xTB-optimized geometries).
+
+\\FloatBarrier
+\\input{compas3x_benchmarks_maxz_combined.tex}
+\\FloatBarrier
+
 \\section{Comparison Plots}
 
 This section contains scatter plots comparing various DFT functionals to revDSD-PBEP86-D4(noFC)/def2-QZVPP for COMPAS-3x geometries. 
 
-For each functional, two subfigures are provided: the left subfigure shows comparisons without the D4 dispersion correction, and the right subfigure shows comparisons with the D4 correction (when supported by the functional). Each plot displays the mean absolute deviation (MAD) in kJ/mol, and the red dashed diagonal line represents perfect agreement between the methods. 
+For each functional, two subfigures are provided: the left subfigure shows comparisons without the D4 dispersion correction, and the right subfigure shows comparisons with the D4 correction (when supported by the functional). Each plot displays the mean absolute deviation (MAD) in kJ/mol, and the red dashed diagonal line represents perfect agreement between the methods.
+
+Immediately below each functional's energy comparison figure, a second figure shows the \\emph{signed} isomerization-energy error relative to revDSD-PBEP86-D4(noFC) as a function of maximum out-of-plane displacement (see dataset column \\colname{max\\_z\\_displacement}), again without/with D4 subfigures.
 
 \\subsection{LDA Functionals}
 
@@ -408,16 +481,19 @@ For each functional, two subfigures are provided: the left subfigure shows compa
     # Add LDA functionals
     for func in LDA_FUNCTIONALS:
         latex_content += generate_functional_section(func, func)
+        latex_content += generate_error_vs_max_z_section(func, func)
 
     # Add GGA functionals
     latex_content += "\\FloatBarrier\n\\subsection{GGA Functionals}\n\n"
     for func in GGA_FUNCTIONALS:
         latex_content += generate_functional_section(func, func)
+        latex_content += generate_error_vs_max_z_section(func, func)
 
     # Add MGGA functionals
     latex_content += "\\FloatBarrier\n\\subsection{MGGA Functionals}\n\n"
     for func in MGGA_FUNCTIONALS:
         latex_content += generate_functional_section(func, func)
+        latex_content += generate_error_vs_max_z_section(func, func)
 
     # Add GFN2-xTB comparison
     if xtb_plot_exists:
@@ -433,6 +509,15 @@ For each functional, two subfigures are provided: the left subfigure shows compa
 \\includegraphics[width=0.45\\textwidth]{plots/compas3x_xtb_vs_revdsd.png}
 \\caption{GFN2-xTB comparison to revDSD-PBEP86-D4(noFC)/def2-QZVPP isomerization energies for COMPAS-3x geometries.}
 \\label{fig:xtb}
+\\end{figure}
+
+"""
+        if xtb_err_z_exists:
+            latex_content += """\\begin{figure}[H]
+\\centering
+\\includegraphics[width=0.45\\textwidth]{plots/compas3x_GFN2_xTB_error_vs_max_z.png}
+\\caption{GFN2-xTB: signed isomerization-energy error vs maximum $z$ displacement.}
+\\label{fig:xtb_err_z}
 \\end{figure}
 
 """
@@ -580,6 +665,7 @@ def main():
         output_txt,
         "--reference-method",
         "min",
+        "--write-maxz-combined-table",
     ]
 
     result = subprocess.run(cmd, cwd=str(script_dir))
@@ -589,6 +675,13 @@ def main():
         sys.exit(1)
 
     print("✓ Plots generated successfully\n")
+
+    maxz_tex = script_dir / "compas3x_benchmarks_maxz_combined.tex"
+    if not maxz_tex.exists():
+        print(
+            f"WARNING: {maxz_tex.name} missing after Step 1; "
+            "LaTeX will fail on \\input{compas3x_benchmarks_maxz_combined.tex} unless you regenerate it.\n"
+        )
 
     # Save plots directory before second run (which will overwrite plots)
     plots_backup = script_dir / "plots_backup"
@@ -632,8 +725,14 @@ def main():
 
     # Restore plots from min run (overwrite the linear_fit plots)
     print("Step 3: Restoring plots with minimum reference method...")
-    for plot_file in plots_backup.glob("compas3x_*_vs_revdsd.png"):
-        shutil.copy2(plot_file, plots_dir / plot_file.name)
+    for pattern in (
+        "compas3x_*_vs_revdsd.png",
+        "compas3x_*_vs_revdsd_small.png",
+        "compas3x_*_error_vs_max_z.png",
+        "compas3x_*_error_vs_max_z_small.png",
+    ):
+        for plot_file in plots_backup.glob(pattern):
+            shutil.copy2(plot_file, plots_dir / plot_file.name)
 
     # Clean up backup
     shutil.rmtree(plots_backup)
@@ -646,6 +745,30 @@ def main():
         print("✓ GFN2-xTB comparison plot generated\n")
     else:
         print("⚠ Warning: GFN2-xTB comparison plot could not be generated\n")
+
+    z_err_script = script_dir / "plot_error_vs_z_displacement.py"
+    if z_err_script.exists():
+        print("Step 4b: Signed error vs max $z$ displacement plots...")
+        print("-" * 70)
+        zcmd = [
+            sys.executable,
+            str(z_err_script),
+            "--exess-csv",
+            str(exess_csv),
+            "--output-dir",
+            str(plots_dir),
+            "--reference-method",
+            "min",
+        ]
+        zres = subprocess.run(zcmd, cwd=str(script_dir))
+        if zres.returncode == 0:
+            print("✓ Error-vs-max-z plots finished\n")
+        else:
+            print("⚠ Warning: plot_error_vs_z_displacement.py failed\n")
+    else:
+        print(
+            "⚠ Skipping error-vs-z plots (plot_error_vs_z_displacement.py not found)\n"
+        )
 
     # Step 5: Generate LaTeX file
     print("Step 5: Generating supporting_information.tex...")

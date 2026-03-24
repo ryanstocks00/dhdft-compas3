@@ -47,7 +47,10 @@ def calculate_stats(x, y):
     r_squared = correlation ** 2
     rmsd = np.sqrt(np.mean((x - y) ** 2))
     abs_errors, abs_x = np.abs(x - y), np.abs(x)
-    mad_percentage = np.mean(np.where(abs_x > 0, abs_errors / abs_x, 0)) * 100
+    # np.where still evaluates both branches; use divide(..., where=) to avoid warnings.
+    rel = np.zeros_like(abs_errors, dtype=float)
+    np.divide(abs_errors, abs_x, out=rel, where=(abs_x > 0))
+    mad_percentage = float(np.mean(rel) * 100)
     return r_squared, rmsd, mad_percentage
 
 
@@ -154,8 +157,8 @@ def create_scatter_plot(x, y, xlabel, ylabel, output_path, mad_kjmol=None, msd_k
         zorder=7,
     )
     
-    # Adjust label padding based on figure size (smaller padding for small plots)
-    labelpad = max(2, int(4 * size_scale)) if size_scale < 0.6 else 4
+    # Adjust label padding based on figure size (tighter than matplotlib default)
+    labelpad = max(1, int(3 * size_scale)) if size_scale < 0.6 else 3
     ax.set_xlabel(xlabel, fontsize=fontsize_label, labelpad=labelpad)
     ax.set_ylabel(ylabel, fontsize=fontsize_label, labelpad=labelpad)
     ax.legend(fontsize=fontsize_legend, frameon=True, fancybox=False, edgecolor='black', loc='upper left')

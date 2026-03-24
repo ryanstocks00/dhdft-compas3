@@ -1,13 +1,64 @@
 #!/usr/bin/env python3
 """Benchmark SVWN5 and GGAs against revDSD-PBEP86-D4(noFC) for COMPAS-3x geometries."""
 
+from __future__ import annotations
+
 import argparse
 import pandas as pd
 import numpy as np
 import re
+from contextlib import contextmanager
 from pathlib import Path
 from scipy.stats import linregress
 from plotting_utils import create_scatter_plot, HARTREE_TO_KJ_PER_MOL, calculate_stats, extract_common_id, format_functional_name
+
+
+def _maxz_common_ids(df: pd.DataFrame, threshold: float) -> tuple[set[str], set[str]]:
+    """Return (lt_ids, ge_ids) for COMPAS-3x GFN2-xTB rows based on max_z_displacement."""
+    if "max_z_displacement" not in df.columns:
+        raise ValueError("EXESS CSV missing max_z_displacement (run extract_exess_data.py).")
+    sub = df[
+        (df["isomer_name"].str.contains("compas3x", case=False, na=False))
+        & (df["optimizer"] == "GFN2-xTB")
+    ].copy()
+    sub["common_id"] = sub["isomer_name"].apply(extract_common_id)
+    sub = sub.dropna(subset=["common_id", "max_z_displacement"])
+    g = sub.groupby("common_id", as_index=False)["max_z_displacement"].first()
+    lt = set(g.loc[g["max_z_displacement"] < threshold, "common_id"].astype(str))
+    ge = set(g.loc[g["max_z_displacement"] >= threshold, "common_id"].astype(str))
+    return lt, ge
+
+
+def _subset_result(result: dict, allowed_ids: set[str]) -> dict | None:
+    """Filter a benchmark result down to allowed common_ids and recompute stats."""
+    merged = result.get("merged")
+    if merged is None or "common_id" not in merged.columns:
+        return None
+    mask = merged["common_id"].astype(str).isin(allowed_ids).values
+    if mask.sum() < 50:
+        return None
+    func = np.asarray(result["func_energies"].values)[mask]
+    ref = np.asarray(result["ref_energies"].values)[mask]
+    deviations = func - ref
+    mad = float(np.mean(np.abs(deviations)))
+    msd = float(np.mean(deviations))
+    r_squared, _, _ = calculate_stats(ref, func)
+    out = dict(result)
+    out["n_structures"] = int(mask.sum())
+    out["mad_kjmol"] = mad
+    out["msd_kjmol"] = msd
+    out["r_squared"] = float(r_squared)
+    return out
+
+
+@contextmanager
+def _latex_output_stream(output_path):
+    """Path or writable file-like (e.g. second table appended to same .tex file)."""
+    if hasattr(output_path, "write"):
+        yield output_path
+    else:
+        with open(output_path, "w", encoding="utf-8") as fp:
+            yield fp
 
 
 def compute_isomerization_energies(df, include_d4, reference_method, revdsd_min_isomers=None):
@@ -231,10 +282,16 @@ def process_functional_comparison(df, functional, reference_functional='revDSD-P
         xlim = plot_limits[0] if plot_limits else None
         ylim = plot_limits[1] if plot_limits else None
         create_scatter_plot(
-            ref_energies_kjmol, func_energies_kjmol,
-            rf'{ref_display} $\Delta E$ (kJ/mol)',
-            rf'{ylabel_func} $\Delta E$ (kJ/mol)',
-            plot_path, mad_kjmol=mad_kjmol, msd_kjmol=msd_kjmol, xlim=xlim, ylim=ylim
+            ref_energies_kjmol,
+            func_energies_kjmol,
+            rf"{ref_display} $\Delta E$ (kJ/mol)",
+            rf"{ylabel_func} $\Delta E$ (kJ/mol)",
+            plot_path,
+            mad_kjmol=mad_kjmol,
+            msd_kjmol=msd_kjmol,
+            xlim=xlim,
+            ylim=ylim,
+            show_linear_fits=True,
         )
         if not quiet:
             print(f"\nPlot saved to: {plot_path}")
@@ -442,8 +499,16 @@ def process_xtb_comparison(df, reference_functional='revDSD-PBEP86-D4', output_d
     }
 
 
-def generate_latex_table(results, output_path):
-    """Generate a LaTeX table with MAD values for each functional."""
+def generate_latex_table(
+    results,
+    output_path,
+    caption_prefix: str = "",
+    label: str = "tab:compas3x_benchmarks",
+):
+    """Generate a LaTeX table with benchmark statistics.
+
+    output_path may be a Path or a writable file-like object.
+    """
     # Organize results by functional
     func_data = {}
     xtb_data = None
@@ -492,7 +557,7 @@ def generate_latex_table(results, output_path):
                                       key=get_mad_for_ordering, reverse=True))
     
     # Write LaTeX table
-    with open(output_path, 'w') as f:
+    with _latex_output_stream(output_path) as f:
         f.write("% Requires: \\usepackage{booktabs, multirow, rotating, graphicx}\n")
         f.write("\\begin{table}[H]\n\\centering\n")
         # Check if we have linear fit data (gradient/offset)
@@ -637,8 +702,281 @@ def generate_latex_table(results, output_path):
             caption = "Mean Absolute Deviation (MAD) and coefficient of determination (r²) of isomerization energies for COMPAS-3x geometries relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP. All DFT calculations performed with (99,590) grid and def2-TZVP basis set. Linear fit correction has been applied, which sets the mean signed deviation (MSD) to zero. GFN2-xTB results are from semiempirical calculations. Best values across all methods are highlighted in bold."
         else:
             caption = "Mean Absolute Deviation (MAD), Mean Signed Deviation (MSD), and coefficient of determination (r²) of isomerization energies for COMPAS-3x geometries relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP. All DFT calculations performed with (99,590) grid and def2-TZVP basis set. GFN2-xTB results are from semiempirical calculations. Best values across all methods are highlighted in bold."
-        f.write(f"\\caption{{{caption}}}\n")
-        f.write("\\label{tab:compas3x_benchmarks}\n\\end{table}\n")
+        f.write(f"\\caption{{{caption_prefix}{caption}}}\n")
+        f.write(f"\\label{{{label}}}\n\\end{{table}}\n")
+
+
+def generate_latex_tables_by_maxz(
+    results: list[dict],
+    exess_df: pd.DataFrame,
+    output_path: Path,
+    threshold: float = 1.0,
+) -> None:
+    """Write two MAD/MSD/r² tables split by max_z_displacement threshold."""
+    lt_ids, ge_ids = _maxz_common_ids(exess_df, threshold)
+    lt_results = [r2 for r in results if (r2 := _subset_result(r, lt_ids)) is not None]
+    ge_results = [r2 for r in results if (r2 := _subset_result(r, ge_ids)) is not None]
+    thr_s = f"{threshold:.1f}"
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("% Auto-generated: split by max_z_displacement\n")
+        f.write(f"% Threshold: {threshold:.2f} Å\n\n")
+        f.write("% ---- max_z_displacement < threshold ----\n")
+        generate_latex_table(
+            lt_results,
+            f,
+            caption_prefix=rf"(max $z$ displacement $< {thr_s}$~\AA) ",
+            label="tab:compas3x_benchmarks_maxz_lt",
+        )
+        f.write("\n\n% ---- max_z_displacement >= threshold ----\n")
+        generate_latex_table(
+            ge_results,
+            f,
+            caption_prefix=rf"(max $z$ displacement $\ge {thr_s}$~\AA) ",
+            label="tab:compas3x_benchmarks_maxz_ge",
+        )
+
+
+def generate_latex_table_maxz_combined(
+    results: list[dict],
+    exess_df: pd.DataFrame,
+    output_path: Path,
+    threshold: float = 1.0,
+) -> None:
+    """One table: planar vs non-planar column groups × without/with D4 (MAD/MSD/r²)."""
+    lt_ids, ge_ids = _maxz_common_ids(exess_df, threshold)
+    func_data: dict = {}
+    xtb_lt: dict | None = None
+    xtb_ge: dict | None = None
+
+    for result in results:
+        func = result["functional"]
+        if func == "GFN2-xTB":
+            rlt = _subset_result(result, lt_ids)
+            rge = _subset_result(result, ge_ids)
+            if rlt is not None:
+                xtb_lt = {
+                    "mad": rlt["mad_kjmol"],
+                    "msd": rlt["msd_kjmol"],
+                    "r_squared": rlt["r_squared"],
+                }
+            if rge is not None:
+                xtb_ge = {
+                    "mad": rge["mad_kjmol"],
+                    "msd": rge["msd_kjmol"],
+                    "r_squared": rge["r_squared"],
+                }
+            continue
+        rlt = _subset_result(result, lt_ids)
+        rge = _subset_result(result, ge_ids)
+        if rlt is None or rge is None:
+            continue
+        key = "with_d4" if result["include_d4"] else "without_d4"
+        if func not in func_data:
+            func_data[func] = {"lt": {}, "ge": {}}
+        func_data[func]["lt"][key] = {
+            "mad": rlt["mad_kjmol"],
+            "msd": rlt["msd_kjmol"],
+            "r_squared": rlt["r_squared"],
+        }
+        func_data[func]["ge"][key] = {
+            "mad": rge["mad_kjmol"],
+            "msd": rge["msd_kjmol"],
+            "r_squared": rge["r_squared"],
+        }
+
+    all_mads: list[float] = []
+    all_r2s: list[float] = []
+    for d in func_data.values():
+        for regime in ("lt", "ge"):
+            for k in d[regime]:
+                all_mads.append(d[regime][k]["mad"])
+                all_r2s.append(d[regime][k]["r_squared"])
+    if xtb_lt is not None:
+        all_mads.append(xtb_lt["mad"])
+        all_r2s.append(xtb_lt["r_squared"])
+    if xtb_ge is not None:
+        all_mads.append(xtb_ge["mad"])
+        all_r2s.append(xtb_ge["r_squared"])
+    best_mad = min(all_mads) if all_mads else None
+    best_r2 = max(all_r2s) if all_r2s else None
+
+    lda_functionals = ["SVWN5"]
+    gga_functionals = ["PBE", "BLYP", "revPBE", "BP86", "BPW91", "B97-D", "HCTH407"]
+    mgga_functionals = [
+        "TPSS", "MN15L", "SCAN", "rSCAN", "r2SCAN", "revTPSS", "t-HCTH", "M06-L", "M11-L",
+    ]
+
+    def get_mad_for_ordering(fn: str) -> float:
+        data = func_data[fn]
+        if fn in lda_functionals:
+            m = data["lt"].get("without_d4", {}).get("mad")
+            return m if m is not None else float("inf")
+        return (
+            data["lt"].get("with_d4", {}).get("mad")
+            or data["lt"].get("without_d4", {}).get("mad")
+            or float("inf")
+        )
+
+    functional_order: list[str] = []
+    for category in (lda_functionals, gga_functionals, mgga_functionals):
+        functional_order.extend(
+            sorted(
+                [f for f in category if f in func_data],
+                key=get_mad_for_ordering,
+                reverse=True,
+            )
+        )
+
+    def _stat(fd: dict, regime: str, d4k: str, field: str):
+        block = fd.get(regime, {}).get(d4k, {})
+        return block.get(field) if block else None
+
+    def format_value(val, best_val, is_r2=False):
+        if val is None:
+            return "---"
+        fmt = f"{val:.3f}" if is_r2 else f"{val:.2f}"
+        tol = 0.001 if is_r2 else 0.01
+        if best_val is not None and abs(val - best_val) < tol:
+            return f"\\textbf{{{fmt}}}"
+        return fmt
+
+    def format_msd(msd):
+        if msd is None:
+            return "---"
+        sign = "$-$" if msd < 0 else "$+$"
+        return f"{sign}{abs(msd):.2f}"
+
+    thr_s = f"{threshold:.1f}"
+    n_lt = len(lt_ids)
+    n_ge = len(ge_ids)
+
+    def _maxz_category_col(category: str, remaining: int) -> str:
+        rot = f"\\rotatebox{{90}}{{\\emph{{{category}}}}}"
+        if remaining == 1:
+            inner = f"\\raisebox{{-0.5\\height}}{{{rot}}}"
+            return f"\\multirow{{{remaining}}}{{*}}{{{inner}}}"
+        return f"\\multirow{{{remaining}}}{{*}}{{{rot}}}"
+
+    def _maxz_rcell(s: str) -> str:
+        return f"\\raisebox{{-0.5\\height}}{{{s}}}"
+
+    _mad_h = "\\shortstack{\\textbf{MAD}\\\\\\footnotesize\\textbf{(kJ/mol)}}"
+    _msd_h = "\\shortstack{\\textbf{MSD}\\\\\\footnotesize\\textbf{(kJ/mol)}}"
+    _r2_h = "\\parbox[t]{2em}{$\\boldsymbol{r^2}$\\vspace{0.5em}}"
+    _metric_row = (
+        f" & & {_mad_h} & {_msd_h} & {_r2_h} & {_mad_h} & {_msd_h} & {_r2_h} & "
+        f"{_mad_h} & {_msd_h} & {_r2_h} & {_mad_h} & {_msd_h} & {_r2_h} \\\\\n"
+    )
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("% Auto-generated: combined max_z_displacement split\n")
+        f.write(f"% Threshold: {threshold:.2f} Å\n")
+        f.write("% Requires: \\usepackage{booktabs, multirow, rotating, graphicx}\n")
+        f.write("\\begin{table}[H]\n\\centering\n")
+        f.write("\\resizebox{\\textwidth}{!}{%\n")
+        f.write(
+            "\\begin{tabular}{@{}c@{\\hspace{0.8em}}l@{\\hspace{0.25em}}"
+            "c@{\\hspace{0.22em}}c@{\\hspace{0.22em}}c@{\\hspace{0.22em}}"
+            "c@{\\hspace{0.22em}}c@{\\hspace{0.22em}}c@{\\hspace{0.22em}}"
+            "c@{\\hspace{0.22em}}c@{\\hspace{0.22em}}c@{\\hspace{0.22em}}"
+            "c@{\\hspace{0.22em}}c@{\\hspace{0.22em}}c@{}}\n"
+        )
+        f.write("\\toprule\n")
+        f.write(
+            " & \\multirow{3}{*}{\\raisebox{-0.5\\height}{\\textbf{Functional}}} & "
+            f"\\multicolumn{{6}}{{c}}{{\\textbf{{Planar (max $z$ $< {thr_s}$~\\AA)}}}} & "
+        )
+        f.write(
+            f"\\multicolumn{{6}}{{c}}{{\\textbf{{Non-planar (max $z$ $\\ge {thr_s}$~\\AA)}}}} \\\\\n"
+        )
+        f.write("\\cmidrule(lr){3-8} \\cmidrule(lr){9-14}\n")
+        f.write(
+            " & & \\multicolumn{3}{c}{\\textbf{Without D4}} & "
+            "\\multicolumn{3}{c}{\\textbf{With D4}} & "
+            "\\multicolumn{3}{c}{\\textbf{Without D4}} & "
+            "\\multicolumn{3}{c}{\\textbf{With D4}} \\\\\n"
+        )
+        f.write(
+            "\\cmidrule(lr){3-5} \\cmidrule(lr){6-8} "
+            "\\cmidrule(lr){9-11} \\cmidrule(lr){12-14}\n"
+        )
+        f.write(_metric_row)
+        f.write("\\midrule\n")
+
+        if xtb_lt is not None or xtb_ge is not None:
+
+            def xtb_cells(xtb: dict | None):
+                if xtb is None:
+                    return "--- & --- & ---"
+                return (
+                    f"{format_value(xtb['mad'], best_mad)} & "
+                    f"{format_msd(xtb['msd'])} & "
+                    f"{format_value(xtb['r_squared'], best_r2, True)}"
+                )
+
+            f.write(
+                f" & GFN2--xTB & --- & --- & --- & {xtb_cells(xtb_lt)} & "
+                f"--- & --- & --- & {xtb_cells(xtb_ge)} \\\\\n"
+            )
+            f.write("\\midrule\n")
+
+        current_category = None
+        category_counts = {
+            "LDA": sum(1 for fn in lda_functionals if fn in func_data),
+            "GGA": sum(1 for fn in gga_functionals if fn in func_data),
+            "MGGA": sum(1 for fn in mgga_functionals if fn in func_data),
+        }
+
+        for func in functional_order:
+            if func not in func_data:
+                continue
+            if func in lda_functionals:
+                category = "LDA"
+            elif func in gga_functionals:
+                category = "GGA"
+            elif func in mgga_functionals:
+                category = "MGGA"
+            else:
+                category = None
+            is_first_in_category = category != current_category
+            if is_first_in_category:
+                if current_category is not None:
+                    f.write("\\midrule\n")
+                current_category = category
+                remaining = category_counts.get(category, 0)
+                f.write(_maxz_category_col(category, remaining))
+
+            func_display = r"$\tau$--HCTH" if func == "t-HCTH" else func.replace("-", "--")
+            d = func_data[func]
+            parts = []
+            for regime in ("lt", "ge"):
+                for d4k in ("without_d4", "with_d4"):
+                    parts.append(format_value(_stat(d, regime, d4k, "mad"), best_mad))
+                    parts.append(format_msd(_stat(d, regime, d4k, "msd")))
+                    parts.append(format_value(_stat(d, regime, d4k, "r_squared"), best_r2, True))
+            row_body = " & ".join(parts)
+
+            if is_first_in_category and category_counts.get(category, 0) == 1:
+                cells = row_body.split(" & ")
+                raised = " & ".join(_maxz_rcell(c) for c in cells)
+                f.write(f" & {_maxz_rcell(func_display)} & {raised} \\\\[2ex]\n")
+            else:
+                f.write(f" & {func_display} & {row_body} \\\\\n")
+
+        f.write("\\bottomrule\n\\end{tabular}%\n}\n")
+        cap = (
+            "Mean Absolute Deviation (MAD), Mean Signed Deviation (MSD), and coefficient "
+            "of determination ($r^2$) of isomerization energies for COMPAS-3x geometries "
+            "relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP, using the revDSD minimum-energy "
+            "isomer as reference without linear correction. "
+            f"Statistics are split into planar (max $z$ $< {thr_s}$~\\AA, {n_lt} geometries) "
+            f"and non-planar (max $z$ $\\ge {thr_s}$~\\AA, {n_ge} geometries), based on max "
+            "$z$ from GFN2-xTB-optimized structures. "
+            "All DFT calculations used (99,590) grid and def2-TZVP. "
+            "Best values across all columns are in bold."
+        )
+        f.write(f"\\caption{{{cap}}}\n")
+        f.write("\\label{tab:compas3x_benchmarks_maxz_combined}\n\\end{table}\n")
 
 
 def save_results_to_csv(results, output_path):
@@ -682,6 +1020,22 @@ def main():
     parser.add_argument("--output-dir", default="plots", help="Output directory for plots")
     parser.add_argument("--reference-method", choices=['min', 'avg', 'linear_fit'], default='min',
                         help="Method for calculating isomerization energies: 'min', 'avg', or 'linear_fit' (applies linear correction)")
+    parser.add_argument(
+        "--write-maxz-split-tables",
+        action="store_true",
+        help="Also write two LaTeX tables split by max_z_displacement (below / above threshold).",
+    )
+    parser.add_argument(
+        "--write-maxz-combined-table",
+        action="store_true",
+        help="Also write one LaTeX table: planar vs non-planar × without/with D4.",
+    )
+    parser.add_argument(
+        "--maxz-threshold",
+        type=float,
+        default=1.0,
+        help="Å threshold for max_z_displacement split (default: 1.0).",
+    )
     args = parser.parse_args()
     
     script_dir = Path(__file__).parent
@@ -805,6 +1159,31 @@ def main():
     # Generate LaTeX table
     latex_path = output_path.with_suffix('.tex')
     generate_latex_table(all_results, latex_path)
+
+    if args.write_maxz_split_tables:
+        if args.reference_method != "min":
+            print("NOTE: --write-maxz-split-tables is intended for --reference-method min.")
+        stem = output_path.with_suffix("").name
+        split_path = output_path.with_suffix("").with_name(f"{stem}_maxz_split.tex")
+        try:
+            generate_latex_tables_by_maxz(
+                all_results, df, split_path, threshold=float(args.maxz_threshold)
+            )
+            print(f"Max-z split tables saved to {split_path}")
+        except Exception as e:
+            print(f"WARNING: Failed to generate max-z split tables: {e}")
+
+    if args.write_maxz_combined_table:
+        if args.reference_method != "min":
+            print("NOTE: --write-maxz-combined-table is intended for --reference-method min.")
+        combined_path = output_path.with_name(output_path.stem + "_maxz_combined.tex")
+        try:
+            generate_latex_table_maxz_combined(
+                all_results, df, combined_path, threshold=float(args.maxz_threshold)
+            )
+            print(f"Max-z combined table saved to {combined_path}")
+        except Exception as e:
+            print(f"WARNING: Failed to generate max-z combined table: {e}")
     
     # Save results to CSV
     csv_path = output_path.with_suffix('.csv')
