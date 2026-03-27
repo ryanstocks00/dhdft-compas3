@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 
 import argparse
 import csv
 import json
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from collections import defaultdict
 from multiprocessing import Pool, cpu_count
 from functools import partial
@@ -14,6 +15,9 @@ import sys
 
 sys.path.append((Path(__file__).parent.parent / "inputs").as_posix())
 import common
+
+from exess_csv_rounding import round_exess_csv_row
+from exess_plane_displacement import plane_metrics_from_xyz
 
 
 def parse_qmmbe_json(path: Path, d4_energy) -> Dict[str, Any]:
@@ -179,6 +183,23 @@ def process_batch(
     return rows
 
 
+def _build_isomer_plane_metrics(batches) -> Dict[str, Optional[Tuple[float, float]]]:
+    """One (max |d|, mean |d|) per isomer name from its XYZ; None on failure."""
+    out: Dict[str, Optional[Tuple[float, float]]] = {}
+    for batch in batches:
+        for isomer in batch.isomers:
+            if isomer.name in out:
+                continue
+            try:
+                out[isomer.name] = plane_metrics_from_xyz(isomer.xyz_path)
+            except Exception as e:
+                print(
+                    f"Warning: plane metrics for {isomer.name} ({isomer.xyz_path}): {e}"
+                )
+                out[isomer.name] = None
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description="Extract EXESS JSON data to CSV")
     ap.add_argument(
@@ -256,6 +277,16 @@ def main():
             rows.extend(batch_rows)
         print(f"Processed {len(rows)} rows sequentially")
 
+    print("Computing max/mean out-of-plane displacement from XYZ geometries...")
+    z_by_name = _build_isomer_plane_metrics(all_batches)
+    for r in rows:
+        zm = z_by_name.get(r["isomer_name"])
+        if zm is None:
+            r["max_z_displacement"] = None
+            r["mean_z_displacement"] = None
+        else:
+            r["max_z_displacement"], r["mean_z_displacement"] = zm
+
     # Find minimum energy isomer for each (C, H) group using revDSD-PBEP86-D4
     # Store the isomer_name that has minimum energy
     min_isomer_by_ch_revdsd: Dict[Tuple[int, int], str] = {}
@@ -319,6 +350,8 @@ def main():
         "hlg_hartree",
         "n_primary_basis_functions",
         "n_atoms",
+        "max_z_displacement",
+        "mean_z_displacement",
         "n_carbons",
         "n_hydrogens",
         "n_scf_iterations",
@@ -342,7 +375,8 @@ def main():
         writer = csv.DictWriter(fh, fieldnames=field_order)
         writer.writeheader()
         for r in rows:
-            writer.writerow(r)
+            out = {fn: r.get(fn) for fn in field_order}
+            writer.writerow(round_exess_csv_row(out))
 
     print(f"Wrote {len(rows)} rows to {args.output}")
 

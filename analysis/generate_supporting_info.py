@@ -279,38 +279,32 @@ def generate_latex_file(plots_dir, table_file, output_file):
 
     def has_err_z_plot(func_name, with_d4):
         suffix = "_with_d4" if with_d4 else "_without_d4"
-        stem = (
-            f"compas3x_{format_functional_name(func_name)}{suffix}_error_vs_max_z"
-        )
+        stem = f"compas3x_{format_functional_name(func_name)}{suffix}_error_vs_max_z"
         return stem in plot_files_err_z
 
     def generate_error_vs_max_z_section(func_name, func_display):
         """Second figure: signed error vs max z (without/with D4 subfigures)."""
         if not (
             has_err_z_plot(func_name, False)
-            or (
-                func_name not in NO_D4_FUNCTIONALS and has_err_z_plot(func_name, True)
-            )
+            or (func_name not in NO_D4_FUNCTIONALS and has_err_z_plot(func_name, True))
         ):
             return ""
         has_d4 = func_name not in NO_D4_FUNCTIONALS
         latex = "\\begin{figure}[H]\n\\centering\n"
         latex += "\\begin{subfigure}{0.45\\textwidth}\n\\centering\n"
         if has_err_z_plot(func_name, False):
-            latex += (
-                f"\\includegraphics[width=\\textwidth]{{{get_err_z_plot_path(func_name, False)}}}\n"
-            )
+            latex += f"\\includegraphics[width=\\textwidth]{{{get_err_z_plot_path(func_name, False)}}}\n"
             latex += "\\caption{Without D4}\n"
         else:
             latex += "% Plot not available\n"
             latex += "\\caption{Without D4 - Not available}\n"
-        latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_err_z_no_d4}}\n"
+        latex += (
+            f"\\label{{fig:{format_functional_name(func_name).lower()}_err_z_no_d4}}\n"
+        )
         latex += "\\end{subfigure}\n\\hfill\n"
         latex += "\\begin{subfigure}{0.45\\textwidth}\n\\centering\n"
         if has_d4 and has_err_z_plot(func_name, True):
-            latex += (
-                f"\\includegraphics[width=\\textwidth]{{{get_err_z_plot_path(func_name, True)}}}\n"
-            )
+            latex += f"\\includegraphics[width=\\textwidth]{{{get_err_z_plot_path(func_name, True)}}}\n"
             latex += "\\caption{With D4}\n"
         else:
             latex += (
@@ -432,7 +426,7 @@ Double-Hybrid, but not Double-Cost: GPU Accelerated DHDFT for the COMPAS-3 Datas
 
 This supporting information provides parameters for linear-fit corrections, comparison plots for benchmarked functionals against the reference method revDSD-PBEP86-D4(noFC)/def2-QZVPP, and detailed descriptions of the produced dataset of DFT energies evaluated on the COMPAS-3 database of polybenzenoid hydrocarbon isomers. The generated dataset contains revDSD-PBEP86-D4(noFC)/def2-QZVPP calculations on the full COMPAS-3 dataset (both COMPAS-3x and COMPAS-3D geometries), along with benchmark calculations for LDA, GGA, and meta-GGA functionals on the COMPAS-3x subset. The dataset includes a breakdown of energy components including SCF, PT2 opposite-spin and same-spin corrections, D4 dispersion, exchange-correlation, and nuclear repulsion energies, molecular orbital properties (HOMO, LUMO, HOMO-LUMO gap) from the SCF calculation, and computational performance metrics including timing and floating-point throughput.
 
-All calculations were performed using the Extreme Scale Electronic Structure System (EXESS) software package with a robustly pruned (99,590) integration grid. The revDSD-PBEP86-D4(noFC) calculations were performed using the def2-QZVPP basis set and all LDA, GGA, and meta-GGA calculations used def2-TZVP. A tight convergence threshold of $10^{-10}$ was used for all calculations which were each performed on a single 4 $\\times$ A100 node of the Perlmutter supercomputer in batches of 20 geometries per submitted calculation. The RI approximation was used for both the SCF and PT2 components of all calculations.
+All calculations were performed using the Extreme Scale Electronic Structure System (EXESS) software package with a robustly pruned (99,590) integration grid. The revDSD-PBEP86-D4(noFC) calculations were performed using the def2-QZVPP basis set and all LDA, GGA, and meta-GGA calculations used def2-TZVP. A tight convergence threshold of $10^{-10}$ for maximum element of the DIIS commutator matrix was used for all calculations which were each performed on a single 4 $\\times$ A100 node of the Perlmutter supercomputer in batches of 20 geometries per submitted calculation. The RI approximation was used for both the SCF and PT2 components of all calculations.
 
 \\section{Linear Fit Corrections}
 
@@ -556,7 +550,7 @@ The following sections describe all columns in the dataset, organized by categor
     \\item \\colname{scf\\_energy\\_hartree}: Converged self-consistent field (SCF) energy in hartree, prior to PT2 step for double hybrids.
     \\item \\colname{pt2\\_os\\_correction\\_hartree}: PT2 opposite-spin (OS) correlation correction in hartree, accounting for electron correlation between electrons of opposite spin. This value is \\texttt{None} for LDA, GGA, and MGGA functionals, as PT2 corrections are only calculated for double-hybrid functionals (e.g., revDSD-PBEP86-D4). Note that it has already been scaled by $c_{os}$.
     \\item \\colname{pt2\\_ss\\_correction\\_hartree}: PT2 same-spin (SS) correlation correction in hartree, accounting for electron correlation between electrons of the same spin. This value is \\texttt{None} for LDA, GGA, and MGGA functionals, as PT2 corrections are only calculated for double-hybrid functionals (e.g., revDSD-PBEP86-D4). Note that it has already been scaled by $c_{ss}$.
-    \\item \\colname{d4\\_energy\\_hartree}: D4 dispersion correction energy in hartree. This value is \\texttt{None} for functionals that do not support the D4 correction (e.g., SVWN5, HCTH407, M11-L, MN15L, t-HCTH).
+    \\item \\colname{d4\\_energy\\_hartree}: D4 dispersion correction energy in hartree. This value is \\texttt{None} for functionals that do not support the D4 correction (i.e., SVWN5, HCTH407, M11-L, MN15L, t-HCTH).
     \\item \\colname{xc\\_energy\\_hartree}: Exchange-correlation energy from the DFT functional evaluated on the converged SCF density in hartree.
     \\item \\colname{nuc\\_repulsion\\_energy\\_hartree}: Nuclear repulsion energy in hartree, representing the classical electrostatic repulsion between atomic nuclei.
     \\item \\colname{elec\\_energy\\_hartree}: Total electronic energy in hartree, calculated as SCF energy $-$ Nuclear Repulsion Energy $-$ XC energy.
@@ -578,6 +572,13 @@ The following sections describe all columns in the dataset, organized by categor
     \\item \\colname{n\\_hydrogens}: Number of hydrogen atoms.
 \\end{itemize}
 
+\\textbf{Geometry / planarity:}
+
+\\begin{itemize}
+    \\item \\colname{max\\_z\\_displacement}: The largest absolute distance to the Z-weighted least-squares mean molecular plane in ~\\AA (atomic number $Z_A$ weights each atom $A$ in the plane fit).
+    \\item \\colname{mean\\_z\\_displacement}: The $Z$-weighted mean of absolute distances to that plane in ~\\AA, $\\sum_i Z_i |d_i| / \\sum_i Z_i$.
+\\end{itemize}
+
 \\textbf{Computational Details:}
 
 \\begin{itemize}
@@ -593,9 +594,9 @@ The following sections describe all columns in the dataset, organized by categor
     \\item \\colname{pt2\\_time\\_s}: Time spent in PT2 correlation calculation in seconds.
     \\item \\colname{b\\_formation\\_time\\_s}: Time spent forming $B_{\\mu\\nu}^P$ matrices for the resolution of identity (RI) approximation in seconds.
     \\item \\colname{diag\\_time\\_s}: Time spent in Fock matrix diagonalization during SCF iterations in seconds.
-    \\item \\colname{ri\\_fock\\_time\\_s}: Time spent in RI-Fock matrix construction (Coulomb + Exchange) in seconds.
+    \\item \\colname{ri\\_fock\\_time\\_s}: Time spent in RI-Fock matrix construction (Coulomb + exchange) in seconds.
     \\item \\colname{xc\\_time\\_s}: Time spent in exchange-correlation energy integration in seconds.
-    \\item \\colname{basis\\_transforms\\_time\\_s}: Time spent in basis set transformations (Cartesian to Spherical) in seconds.
+    \\item \\colname{basis\\_transforms\\_time\\_s}: Time spent in basis set transformations (Cartesian to spherical) in seconds.
 \\end{itemize}
 
 \\textbf{Computational Performance:}
