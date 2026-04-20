@@ -283,7 +283,7 @@ def generate_latex_file(plots_dir, table_file, output_file):
         return stem in plot_files_err_z
 
     def generate_error_vs_max_z_section(func_name, func_display):
-        """Second figure: signed error vs max z (without/with D4 subfigures)."""
+        """Second figure: signed error vs max |z| (without/with D4 subfigures)."""
         if not (
             has_err_z_plot(func_name, False)
             or (func_name not in NO_D4_FUNCTIONALS and has_err_z_plot(func_name, True))
@@ -315,9 +315,14 @@ def generate_latex_file(plots_dir, table_file, output_file):
             latex += "\\caption{With D4 - Not available}\n"
         latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_err_z_with_d4}}\n"
         latex += "\\end{subfigure}\n"
+        d4_note = (
+            "(a) without D4 dispersion correction; (b) with D4 dispersion correction."
+            if has_d4
+            else "(a) without D4 dispersion correction; (b) D4 correction not available."
+        )
         latex += (
             f"\\caption{{{func_display}: signed isomerization-energy error vs "
-            f"maximum $z$ displacement.}}\n"
+            f"maximum $|z|$ displacement. {d4_note}}}\n"
         )
         latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_err_z}}\n"
         latex += "\\end{figure}\n\n"
@@ -356,7 +361,12 @@ def generate_latex_file(plots_dir, table_file, output_file):
         latex += f"\\label{{fig:{format_functional_name(func_name).lower()}_with_d4}}\n"
         latex += "\\end{subfigure}\n"
 
-        latex += f"\\caption{{{func_display}/def2-TZVP comparison to revDSD-PBEP86-D4(noFC)/def2-QZVPP isomerization energies for COMPAS-3x geometries.}}\n"
+        d4_note = (
+            "(a) without D4 dispersion correction; (b) with D4 dispersion correction."
+            if has_d4
+            else "(a) without D4 dispersion correction; (b) D4 correction not available."
+        )
+        latex += f"\\caption{{{func_display}/def2-TZVP comparison to revDSD-PBEP86-D4(noFC)/def2-QZVPP isomerization energies for COMPAS-3x geometries. {d4_note}}}\n"
         latex += f"\\label{{fig:{format_functional_name(func_name).lower()}}}\n"
         latex += "\\end{figure}\n\n"
 
@@ -393,12 +403,11 @@ def generate_latex_file(plots_dir, table_file, output_file):
     linkcolor=blue,
     filecolor=magenta,      
     urlcolor=cyan,
-    pdftitle={Supporting Information: Double-Hybrid, but not Double-Cost: GPU Accelerated DHDFT for the COMPAS-3 Dataset},
+    pdftitle={Double-Hybrid, but not Double-Cost: GPU Accelerated DHDFT for the COMPAS-3 Dataset of Polybenzenoid Hydrocarbons --- Supporting Information},
     pdfauthor={Ryan Stocks, Elise Palethorpe, Amir Karton, Giuseppe M. J. Barca},
 }
 
-\\title{Supporting Information:\\\\
-Double-Hybrid, but not Double-Cost: GPU Accelerated DHDFT for the COMPAS-3 Dataset}
+\\title{Double-Hybrid, but not Double-Cost: GPU Accelerated DHDFT for the COMPAS-3 Dataset of Polybenzenoid Hydrocarbons}
 
 \\author{Ryan Stocks}
 \\affiliation{School of Computing, Australian National University, Canberra, ACT 2601, Australia}
@@ -420,7 +429,15 @@ Double-Hybrid, but not Double-Cost: GPU Accelerated DHDFT for the COMPAS-3 Datas
 
 \\begin{document}
 
+\\renewcommand{\\thefigure}{S\\arabic{figure}}
+\\renewcommand{\\thetable}{S\\arabic{table}}
+\\renewcommand{\\thepage}{S\\arabic{page}}
+
 \\maketitle
+
+\\begin{center}
+{\\large\\textbf{Supporting Information}}
+\\end{center}
 
 \\section{Introduction}
 
@@ -453,7 +470,7 @@ where the slope and offset are determined by linear regression of the reference 
 \\FloatBarrier
 \\subsection{Functional benchmarks by planar/non-planar}
 
-Table~\\ref{tab:compas3x_benchmarks_maxz_combined} lists MAD, MSD, and $r^2$ with no linear correction for COMPAS-3x structures grouped into planar (max $z$ $< 1$~\\AA) and non-planar (max $z$ $\\ge 1$~\\AA) subsets (GFN2-xTB-optimized geometries).
+Table~\\ref{tab:compas3x_benchmarks_maxz_combined} lists MAD, MSD, and $r^2$ with no linear correction for COMPAS-3x structures grouped into planar (max $|z|$ $< 1$~\\AA) and non-planar (max $|z|$ $\\ge 1$~\\AA) subsets (GFN2-xTB-optimized geometries).
 
 \\FloatBarrier
 \\input{compas3x_benchmarks_maxz_combined.tex}
@@ -510,7 +527,7 @@ Immediately below each functional's energy comparison figure, a second figure sh
             latex_content += """\\begin{figure}[H]
 \\centering
 \\includegraphics[width=0.45\\textwidth]{plots/compas3x_GFN2_xTB_error_vs_max_z.png}
-\\caption{GFN2-xTB: signed isomerization-energy error vs maximum $z$ displacement.}
+\\caption{GFN2-xTB: signed isomerization-energy error vs maximum $|z|$ displacement.}
 \\label{fig:xtb_err_z}
 \\end{figure}
 

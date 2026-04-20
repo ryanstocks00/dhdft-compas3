@@ -724,11 +724,18 @@ def generate_latex_table(
             )
             f.write("\\toprule\n")
             f.write(
-                " & \\multirow{3}{*}{Functional} & \\multicolumn{3}{c}{Without D4} & \\multicolumn{3}{c}{With D4} \\\\\n"
+                " & \\multirow{3}{*}{\\textbf{Functional}} & "
+                "\\multicolumn{3}{c}{\\textbf{Without D4}} & "
+                "\\multicolumn{3}{c}{\\textbf{With D4}} \\\\\n"
             )
             f.write("\\cmidrule(lr){3-5} \\cmidrule(lr){6-8}\n")
             f.write(
-                " & & \\shortstack{Slope} & \\shortstack{Offset\\\\(kJ/mol)} & \\shortstack{MAD\\\\ (corrected)\\\\ (kJ/mol)} & \\shortstack{Slope} & \\shortstack{Offset\\\\(kJ/mol)} & \\shortstack{MAD\\\\ (corrected)\\\\ (kJ/mol)} \\\\\n"
+                " & & \\shortstack{\\textbf{Slope}} & "
+                "\\shortstack{\\textbf{Offset}\\\\\\textbf{(kJ/mol)}} & "
+                "\\shortstack{\\textbf{MAD}\\\\\\textbf{(corrected)}\\\\\\textbf{(kJ/mol)}} & "
+                "\\shortstack{\\textbf{Slope}} & "
+                "\\shortstack{\\textbf{Offset}\\\\\\textbf{(kJ/mol)}} & "
+                "\\shortstack{\\textbf{MAD}\\\\\\textbf{(corrected)}\\\\\\textbf{(kJ/mol)}} \\\\\n"
             )
         else:
             f.write(
@@ -736,11 +743,18 @@ def generate_latex_table(
             )
             f.write("\\toprule\n")
             f.write(
-                " & \\multirow{3}{*}{Functional} & \\multicolumn{3}{c}{Without D4} & \\multicolumn{3}{c}{With D4} \\\\\n"
+                " & \\multirow{3}{*}{\\textbf{Functional}} & "
+                "\\multicolumn{3}{c}{\\textbf{Without D4}} & "
+                "\\multicolumn{3}{c}{\\textbf{With D4}} \\\\\n"
             )
             f.write("\\cmidrule(lr){3-5} \\cmidrule(lr){6-8}\n")
             f.write(
-                " & & \\shortstack{MAD\\\\\\footnotesize(kJ/mol)} & \\shortstack{MSD\\\\\\footnotesize(kJ/mol)} & \\parbox[t]{2em}{$r^2$\\vspace{0.5em}} & \\shortstack{MAD\\\\\\footnotesize(kJ/mol)} & \\shortstack{MSD\\\\\\footnotesize(kJ/mol)} & \\parbox[t]{2em}{$r^2$\\vspace{0.5em}} \\\\\n"
+                " & & \\shortstack{\\textbf{MAD}\\\\\\textbf{\\footnotesize(kJ/mol)}} & "
+                "\\shortstack{\\textbf{MSD}\\\\\\textbf{\\footnotesize(kJ/mol)}} & "
+                "\\parbox[t]{2em}{\\textbf{$r^2$}\\vspace{0.5em}} & "
+                "\\shortstack{\\textbf{MAD}\\\\\\textbf{\\footnotesize(kJ/mol)}} & "
+                "\\shortstack{\\textbf{MSD}\\\\\\textbf{\\footnotesize(kJ/mol)}} & "
+                "\\parbox[t]{2em}{\\textbf{$r^2$}\\vspace{0.5em}} \\\\\n"
             )
         f.write("\\midrule\n")
 
@@ -921,14 +935,14 @@ def generate_latex_tables_by_maxz(
         generate_latex_table(
             lt_results,
             f,
-            caption_prefix=rf"(max $z$ displacement $< {thr_s}$~\AA) ",
+            caption_prefix=rf"(max $|z|$ displacement $< {thr_s}$~\AA) ",
             label="tab:compas3x_benchmarks_maxz_lt",
         )
         f.write("\n\n% ---- max_z_displacement >= threshold ----\n")
         generate_latex_table(
             ge_results,
             f,
-            caption_prefix=rf"(max $z$ displacement $\ge {thr_s}$~\AA) ",
+            caption_prefix=rf"(max $|z|$ displacement $\ge {thr_s}$~\AA) ",
             label="tab:compas3x_benchmarks_maxz_ge",
         )
 
@@ -1065,9 +1079,9 @@ def generate_latex_table_maxz_combined(
     def _maxz_rcell(s: str) -> str:
         return f"\\raisebox{{-0.5\\height}}{{{s}}}"
 
-    _mad_h = "\\shortstack{MAD\\\\\\footnotesize(kJ/mol)}"
-    _msd_h = "\\shortstack{MSD\\\\\\footnotesize(kJ/mol)}"
-    _r2_h = "\\parbox[t]{2em}{$r^2$\\vspace{0.5em}}"
+    _mad_h = "\\shortstack{\\textbf{MAD}\\\\\\textbf{\\footnotesize(kJ/mol)}}"
+    _msd_h = "\\shortstack{\\textbf{MSD}\\\\\\textbf{\\footnotesize(kJ/mol)}}"
+    _r2_h = "\\parbox[t]{2em}{\\textbf{$r^2$}\\vspace{0.5em}}"
     _metric_row = (
         f" & & {_mad_h} & {_msd_h} & {_r2_h} & {_mad_h} & {_msd_h} & {_r2_h} & "
         f"{_mad_h} & {_msd_h} & {_r2_h} & {_mad_h} & {_msd_h} & {_r2_h} \\\\\n"
@@ -1088,18 +1102,18 @@ def generate_latex_table_maxz_combined(
         )
         f.write("\\toprule\n")
         f.write(
-            " & \\multirow{3}{*}{\\raisebox{-0.5\\height}{Functional}} & "
-            f"\\multicolumn{{6}}{{c}}{{Planar (max $z$ $< {thr_s}$~\\AA)}} & "
+            " & \\multirow{3}{*}{\\raisebox{-0.5\\height}{\\textbf{Functional}}} & "
+            f"\\multicolumn{{6}}{{c}}{{\\textbf{{Planar (max $|z|$ $< {thr_s}$~\\AA)}}}} & "
         )
         f.write(
-            f"\\multicolumn{{6}}{{c}}{{Non-planar (max $z$ $\\ge {thr_s}$~\\AA)}} \\\\\n"
+            f"\\multicolumn{{6}}{{c}}{{\\textbf{{Non-planar (max $|z|$ $\\ge {thr_s}$~\\AA)}}}} \\\\\n"
         )
         f.write("\\cmidrule(lr){3-8} \\cmidrule(lr){9-14}\n")
         f.write(
-            " & & \\multicolumn{3}{c}{Without D4} & "
-            "\\multicolumn{3}{c}{With D4} & "
-            "\\multicolumn{3}{c}{Without D4} & "
-            "\\multicolumn{3}{c}{With D4} \\\\\n"
+            " & & \\multicolumn{3}{c}{\\textbf{Without D4}} & "
+            "\\multicolumn{3}{c}{\\textbf{With D4}} & "
+            "\\multicolumn{3}{c}{\\textbf{Without D4}} & "
+            "\\multicolumn{3}{c}{\\textbf{With D4}} \\\\\n"
         )
         f.write(
             "\\cmidrule(lr){3-5} \\cmidrule(lr){6-8} "
@@ -1178,9 +1192,9 @@ def generate_latex_table_maxz_combined(
             "of determination ($r^2$) of isomerization energies for COMPAS-3x geometries "
             "relative to revDSD-PBEP86-D4(noFC)/def2-QZVPP, using the revDSD minimum-energy "
             "isomer as reference without linear correction. "
-            f"Statistics are split into planar (max $z$ $< {thr_s}$~\\AA, {n_lt} geometries) "
-            f"and non-planar (max $z$ $\\ge {thr_s}$~\\AA, {n_ge} geometries), based on max "
-            "$z$ from GFN2-xTB-optimized structures. "
+            f"Statistics are split into planar (max $|z|$ $< {thr_s}$~\\AA, {n_lt} geometries) "
+            f"and non-planar (max $|z|$ $\\ge {thr_s}$~\\AA, {n_ge} geometries), based on max "
+            "$|z|$ from GFN2-xTB-optimized structures. "
             "All DFT calculations used (99,590) grid and def2-TZVP."
         )
         f.write(f"\\caption{{{cap}}}\n")

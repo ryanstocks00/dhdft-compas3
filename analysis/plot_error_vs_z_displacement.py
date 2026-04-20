@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Signed isomerization-energy error (vs revDSD-PBEP86-D4) vs max_z_displacement.
+Signed isomerization-energy error (vs revDSD-PBEP86-D4) vs max_|z|_displacement.
 Writes without-D4 and with-D4 PNGs (shared y-scale when both exist). Each figure
 also has a *_small.png (1.65 in), styled like create_scatter_plot small figures.
 """
@@ -107,7 +107,7 @@ def _merge_err_z(res, ztab: pd.DataFrame) -> pd.DataFrame | None:
 def linear_fit_signed_err_vs_max_z(
     max_z: np.ndarray, signed_err: np.ndarray
 ) -> tuple[float, float, float] | None:
-    """OLS $y = m x + b$ with $x$ = max $z$ (Å), $y$ = signed error (kJ/mol).
+    """OLS $y = m x + b$ with $x$ = max $|z|$ (Å), $y$ = signed error (kJ/mol).
 
     Returns ``(m, b, r^2)`` or ``None`` if a fit is not defined.
     """
@@ -139,7 +139,7 @@ def print_z_displacement_fit_summary_table(
     """Print ``functional``, $r^2$, gradient, intercept without D4, and with D4 (if applicable)."""
     print("\n" + "=" * 120)
     print(
-        "Summary: signed isomerization-energy error vs max z displacement (linear fit)"
+        "Summary: signed isomerization-energy error vs max |z| displacement (linear fit)"
     )
     print("=" * 120)
     print(
@@ -335,7 +335,7 @@ def write_z_displacement_fit_summary_latex_table(
         f.write("\\end{tabular}\n")
         cap = (
             "Coefficient of determination ($r^2$) and linear-fit gradient for signed "
-            "isomerization-energy error versus maximum $z$ displacement for COMPAS-3x "
+            "isomerization-energy error versus maximum $|z|$ displacement for COMPAS-3x "
             "geometries, split by inclusion of D4."
         )
         f.write(f"\\caption{{{caption_prefix}{cap}}}\n")
@@ -437,7 +437,7 @@ def plot_signed_vs_max_z(
                 loc="upper left",
             )
         ax.set_xlabel(
-            r"Max $z$ displacement ($\mathrm{\AA}$)",
+            r"Max $|z|$ displacement ($\mathrm{\AA}$)",
             fontsize=fontsize_label,
             labelpad=labelpad,
         )
